@@ -1,0 +1,93 @@
+<div class="mesh-bg"></div>
+<div class="subtle-grid"></div>
+
+<main class="intro-main">
+  <div class="content-container">
+    <!-- Central Visual -->
+    <div class="visual-wrapper">
+      <div class="visual-group">
+        <div class="visual-glow"></div>
+        <div class="visual-icon-box">
+          <i class="bi bi-chat-dots visual-icon"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- Welcome Message -->
+    <div class="welcome-section">
+      <h1 class="welcome-title">
+        Chào mừng đến với <span class="text-gradient">ChatPigeons!</span>
+      </h1>
+      <p class="welcome-desc">
+        Kết nối với bạn bè và gia đình của bạn một cách dễ dàng và bảo mật.
+      </p>
+    </div>
+
+    <!-- Primary Action -->
+    <div class="action-section">
+      @if (!hasConversations()) {
+      <button class="btn-start" (click)="handleStart()">
+        <span>BẮT ĐẦU TRÒ CHUYỆN</span>
+      </button>
+      }
+
+      <!-- Core Features Section -->
+      <div class="features-section">
+        <div class="features-header">
+          <span class="features-label">Tính năng nổi bật</span>
+          <div class="features-line"></div>
+        </div>
+
+        <div class="features-grid">
+          <!-- Feature: Lightning Fast -->
+          <div class="feature-card">
+            <div class="feature-icon-wrap">
+              <i class="bi bi-lightning-charge"></i>
+            </div>
+            <div class="feature-info">
+              <h3 class="feature-title">Tốc độ cực nhanh</h3>
+              <p class="feature-desc">Trải nghiệm tốc độ cực nhanh với giao diện thân thiện với người dùng.</p>
+            </div>
+          </div>
+
+          <!-- Feature: Encryption -->
+          <div class="feature-card">
+            <div class="feature-icon-wrap">
+              <i class="bi bi-shield-check"></i>
+            </div>
+            <div class="feature-info">
+              <h3 class="feature-title">Bảo mật đầu cuối</h3>
+              <p class="feature-desc">Cuộc trò chuyện của bạn được bảo vệ bởi mã hóa đầu cuối.</p>
+            </div>
+          </div>
+
+          <!-- Feature: Design -->
+          <div class="feature-card">
+            <div class="feature-icon-wrap">
+              <i class="bi bi-emoji-smile"></i>
+            </div>
+            <div class="feature-info">
+              <h3 class="feature-title">Giao diện thân thiện</h3>
+              <p class="feature-desc">Giao diện thân thiện với người dùng, dễ dàng sử dụng.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="features-line"></div>
+    </div>
+  </div>
+
+  <!-- System Status Footer -->
+  <footer class="intro-footer">
+    <div class="status-item">
+      <span>Tác giả: <span class="author-name">HMDuck <i class="bi bi-people-fill collaborative-icon"></i> VTTam</span></span>
+    </div>
+    <div class="status-divider"></div>
+    <a href="https://github.com/hcmue-hmduck/ChatApps_Pigeons" target="_blank" class="status-link">
+      <i class="bi bi-github"></i>
+      <span>GITHUB</span>
+    </a>
+    <div class="status-divider"></div>
+    <div class="status-item">Phiên bản {{ version }}</div>
+  </footer>
+</main>

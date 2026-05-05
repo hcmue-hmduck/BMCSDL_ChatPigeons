@@ -1,0 +1,476 @@
+<aside class="sidebar-container">
+    <!-- Header: Aligned with Chat Header -->
+    <div class="sidebar-header">
+        <button class="back-btn" (click)="closePanel.emit()" title="Quay lại">
+            <i class="bi bi-arrow-left"></i>
+        </button>
+        <h5 class="header-title">Thông tin</h5>
+    </div>
+
+    <div class="sidebar-content-scroll">
+        <!-- Profile Section -->
+        <div class="profile-section">
+            <div class="avatar-container">
+                <app-group-avatar-layout [members]="participants" [isGroup]="isGroupConversation"
+                    [avatarUrl]="isGroupConversation ? (conversationAvatar || conversationInfor?.avatar_url || 'assets/AvatarDefault.jpg') : profileAvatar"
+                    [alt]="profileName" [size]="112">
+                </app-group-avatar-layout>
+            </div>
+            @if (!isGroupConversation && otherParticipant?.is_bot) {
+            <h1 class="profile-name"><i class="bi bi-robot me-1"></i>{{ profileName }}</h1>
+            } @else {
+            <h1 class="profile-name">{{ profileName }}</h1>
+            }
+
+            <div class="action-buttons">
+                @if (!isGroupConversation) {
+                    <div class="action-item group">
+                        <div class="icon-circle">
+                            <i class="bi bi-person-fill"></i>
+                        </div>
+                        <span class="action-label">Trang cá nhân</span>
+                    </div>
+                }
+                @else {
+                    <div class="action-item group">
+                        <div class="icon-circle" (click)="handleAddMember()">
+                            <i class="bi bi-person-plus-fill"></i>
+                        </div>
+                        <span class="action-label">Thêm thành viên</span>
+                    </div>
+                }
+                <div class="action-item group">
+                    <div class="icon-circle">
+                        <i class="bi bi-bell-fill"></i>
+                    </div>
+                    <span class="action-label">Tắt thông báo</span>
+                </div>
+                <div class="action-item group">
+                    <div class="icon-circle">
+                        <i class="bi bi-search"></i>
+                    </div>
+                    <span class="action-label">Tìm kiếm</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Accordion Sections -->
+        <div class="accordion-list">
+            <!-- Tùy chỉnh -->
+            <div class="accordion-item">
+                <button class="accordion-header" (click)="toggleSection('customization')">
+                    <span>Tùy chỉnh</span>
+                    <i class="bi" [class.bi-chevron-up]="sections().customization"
+                        [class.bi-chevron-down]="!sections().customization"></i>
+                </button>
+                <div class="accordion-content" [class.open]="sections().customization">
+                    <div class="content-padding">
+                        <div class="list-item">
+                            <span>Thay đổi chủ đề</span>
+                            <div class="theme-dot"></div>
+                        </div>
+                        <div class="list-item">
+                            <span>Chỉnh sửa biểu tượng</span>
+                            <span class="emoji">⚡</span>
+                        </div>
+                        <div class="list-item">
+                            <span>Chỉnh sửa biệt danh</span>
+                            <span class="muted-text">Pigeons</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Thành viên -->
+            @if (isGroupConversation) {
+            <div class="accordion-item">
+                <button class="accordion-header" (click)="toggleSection('members')">
+                    <span>Thành viên</span>
+                    <i class="bi" [class.bi-chevron-up]="sections().members"
+                        [class.bi-chevron-down]="!sections().members"></i>
+                </button>
+                <div class="accordion-content" [class.open]="sections().members">
+                    <div class="content-padding">
+                        @for (member of participants; track member.user_id) {
+                        <div class="member-item">
+                            <img [src]="member.avatar_url" [alt]="member.full_name" class="member-avatar">
+                            <div class="member-info">
+                                <p class="member-name">{{ member.full_name }}</p>
+                                <p class="member-role accent-text">{{ member.role === 'admin' ? 'Quản trị viên' : 'Thành viên' }}</p>
+                            </div>
+                        </div>
+                        }
+                        @if (isGroupConversation) {
+                        <button class="add-people-btn" (click)="handleAddMember()">
+                            <i class="bi bi-person-plus"></i>
+                            Thêm thành viên
+                        </button>
+                        }
+                    </div>
+                </div>
+            </div>
+            }
+
+            <!-- Image Section -->
+            <div class="accordion-item">
+                <button class="accordion-header" (click)="toggleSection('image')">
+                    <span>Ảnh</span>
+                    <i class="bi" [class.bi-chevron-up]="sections().image"
+                        [class.bi-chevron-down]="!sections().image"></i>
+                </button>
+                <div class="accordion-content" [class.open]="sections().image">
+                    <div class="content-padding">
+                        @if (imgData().length > 0) {
+                        <div class="media-section">
+                            <div class="media-grid">
+                                @for (item of (mediaShowAll().image ? imgData() : imgData().slice(0, 3)); track item.id; let i = $index) {
+                                <div class="media-item" (click)="openGallery(i)">
+                                    <img [src]="item.file_url" [alt]="item.file_name">
+                                </div>
+                                }
+                            </div>
+                            @if (imgData().length > 3) {
+                            <div class="view-more-container">
+                                <button class="see-all" (click)="toggleMediaShowAll('image')">
+                                    {{ mediaShowAll().image ? 'Thu gọn' : 'Xem tất cả (' + imgData().length + ')' }}
+                                </button>
+                            </div>
+                            }
+                        </div>
+                        } @else {
+                        <p class="muted-text text-center">Chưa có ảnh nào được chia sẻ</p>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Video Section -->
+            <div class="accordion-item">
+                <button class="accordion-header" (click)="toggleSection('video')">
+                    <span>Video</span>
+                    <i class="bi" [class.bi-chevron-up]="sections().video"
+                        [class.bi-chevron-down]="!sections().video"></i>
+                </button>
+                <div class="accordion-content" [class.open]="sections().video">
+                    <div class="content-padding">
+                        @if (vidData().length > 0) {
+                        <div class="media-section">
+                            <div class="media-grid">
+                                @for (item of (mediaShowAll().video ? vidData() : vidData().slice(0, 3)); track item.id; let i = $index) {
+                                <div class="media-item video" (click)="openVideoGallery(i)">
+                                    @if (item.thumbnail_url) {
+                                    <img [src]="item.thumbnail_url" [alt]="item.file_name">
+                                    } @else {
+                                    <div class="video-placeholder">
+                                        <i class="bi bi-play-fill"></i>
+                                    </div>
+                                    }
+                                    <i class="bi bi-play-circle video-icon-overlay"></i>
+                                </div>
+                                }
+                            </div>
+                            @if (vidData().length > 3) {
+                            <div class="view-more-container">
+                                <button class="see-all" (click)="toggleMediaShowAll('video')">
+                                    {{ mediaShowAll().video ? 'Thu gọn' : 'Xem tất cả (' + vidData().length + ')' }}
+                                </button>
+                            </div>
+                            }
+                        </div>
+                        } @else {
+                        <p class="muted-text text-center">Chưa có video nào được chia sẻ</p>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Link Section -->
+            <div class="accordion-item">
+                <button class="accordion-header" (click)="toggleSection('link')">
+                    <span>Liên kết</span>
+                    <i class="bi" [class.bi-chevron-up]="sections().link"
+                        [class.bi-chevron-down]="!sections().link"></i>
+                </button>
+                <div class="accordion-content" [class.open]="sections().link">
+                    <div class="content-padding">
+                        @if (linkData().length > 0) {
+                        <div class="files-list">
+                            @for (link of (mediaShowAll().link ? linkData() : linkData().slice(0, 3)); track link.id) {
+                            <div class="file-item group" (click)="openLink(link.file_url)">
+                                <div class="file-icon link-thumb">
+                                    @if (link.thumbnail_url) {
+                                    <img [src]="link.thumbnail_url" class="thumb-img" alt="link preview">
+                                    } @else {
+                                    <i class="bi bi-link-45deg"></i>
+                                    }
+                                </div>
+                                <div class="file-info">
+                                    <p class="file-name text-truncate">{{ link.file_name || link.content }}</p>
+                                    <p class="file-meta text-truncate">{{ link.file_url }}</p>
+                                </div>
+                            </div>
+                            }
+                        </div>
+                        @if (linkData().length > 3) {
+                        <div class="view-more-container">
+                            <button class="see-all" (click)="toggleMediaShowAll('link')">
+                                {{ mediaShowAll().link ? 'Thu gọn' : 'Xem tất cả (' + linkData().length + ')' }}
+                            </button>
+                        </div>
+                        }
+                        } @else {
+                        <p class="muted-text text-center">Chưa có liên kết nào được chia sẻ</p>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- File Section -->
+            <div class="accordion-item">
+                <button class="accordion-header" (click)="toggleSection('file')">
+                    <span>Tệp tin</span>
+                    <i class="bi" [class.bi-chevron-up]="sections().file"
+                        [class.bi-chevron-down]="!sections().file"></i>
+                </button>
+                <div class="accordion-content" [class.open]="sections().file">
+                    <div class="content-padding">
+                        @if (fileData().length > 0) {
+                        <div class="files-list">
+                            @for (file of (mediaShowAll().file ? fileData() : fileData().slice(0, 3)); track file.id) {
+                            <div class="file-item group" (click)="downloadFile(file, $event)">
+                                <div class="file-icon" [class.pdf]="file.file_name?.toLowerCase()?.endsWith('.pdf')">
+                                    <i class="bi bi-file-earmark-text"></i>
+                                </div>
+                                <div class="file-info">
+                                    <p class="file-name text-truncate">{{ file.file_name }}</p>
+                                    <p class="file-meta">{{ file.created_at | date:'dd/MM/yyyy' }}</p>
+                                </div>
+                            </div>
+                            }
+                        </div>
+                        @if (fileData().length > 3) {
+                        <div class="view-more-container">
+                            <button class="see-all" (click)="toggleMediaShowAll('file')">
+                                {{ mediaShowAll().file ? 'Thu gọn' : 'Xem tất cả (' + fileData().length + ')' }}
+                            </button>
+                        </div>
+                        }
+                        } @else {
+                        <p class="muted-text text-center">Chưa có tệp tin nào được chia sẻ</p>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quyền riêng tư & Hỗ trợ -->
+            <div class="accordion-item">
+                <button class="accordion-header" (click)="toggleSection('privacy')">
+                    <span>Quyền riêng tư & Hỗ trợ</span>
+                    <i class="bi" [class.bi-chevron-up]="sections().privacy"
+                        [class.bi-chevron-down]="!sections().privacy"></i>
+                </button>
+                <div class="accordion-content" [class.open]="sections().privacy">
+                    <div class="content-padding">
+                        <button class="action-row group">
+                            <i class="bi bi-slash-circle"></i>
+                            <div class="action-body">
+                                <p class="action-title">Tắt thông báo</p>
+                                <p class="action-status">Mặc định</p>
+                            </div>
+                        </button>
+                        <button class="action-row group">
+                            <i class="bi bi-eye"></i>
+                            <div class="action-body">
+                                <p class="action-title">Thông báo đã đọc</p>
+                                <p class="action-status">Đang bật</p>
+                            </div>
+                        </button>
+                        <button class="action-row group">
+                            <i class="bi bi-clock-history"></i>
+                            <div class="action-body">
+                                <p class="action-title">Tin nhắn tự xóa</p>
+                                <p class="action-status">Tắt</p>
+                            </div>
+                        </button>
+
+                        <div class="separator"></div>
+
+                        <button class="action-row danger group">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            <div class="action-body">
+                                <p class="action-title">Báo cáo</p>
+                                <p class="action-status">Báo cáo vi phạm nội dung</p>
+                            </div>
+                        </button>
+                        <button class="action-row danger group">
+                            <i class="bi bi-shield-slash"></i>
+                            <span>Chặn liên hệ</span>
+                        </button>
+                        <button class="action-row danger group">
+                            <i class="bi bi-box-arrow-right"></i>
+                            <span>Rời khỏi cuộc trò chuyện</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</aside>
+
+<!-- Image Viewer Modal Overlay -->
+@if (isImageViewerOpen) {
+<div class="image-viewer-overlay" (click)="closeImageViewer()">
+    <!-- Navigation Buttons -->
+    @if (imgData().length > 1) {
+    <button class="nav-btn prev" (click)="prevImage($event)" [disabled]="currentViewerIndex <= 0" title="Ảnh trước">
+        <i class="bi bi-chevron-left"></i>
+    </button>
+    <button class="nav-btn next" (click)="nextImage($event)" [disabled]="currentViewerIndex >= imgData().length - 1"
+        title="Ảnh sau">
+        <i class="bi bi-chevron-right"></i>
+    </button>
+    }
+
+    <!-- Toolbar -->
+    <div class="viewer-toolbar" (click)="$event.stopPropagation()">
+        <button class="viewer-tool-btn" title="Thu nhỏ" (click)="zoomOutViewer($event)"
+            [disabled]="viewerZoom <= viewerZoomMin">
+            <i class="bi bi-zoom-out"></i>
+        </button>
+        <button class="viewer-tool-btn viewer-zoom-readout" title="Đặt lại" (click)="resetViewerZoom($event)">
+            {{ (viewerZoom * 100).toFixed(0) }}%
+        </button>
+        <button class="viewer-tool-btn" title="Phóng to" (click)="zoomInViewer($event)"
+            [disabled]="viewerZoom >= viewerZoomMax">
+            <i class="bi bi-zoom-in"></i>
+        </button>
+    </div>
+
+    <!-- Close Button -->
+    <button class="close-viewer" (click)="closeImageViewer()">
+        <i class="bi bi-x-lg"></i>
+    </button>
+
+    <!-- Viewer Content -->
+    <div class="viewer-content" (pointermove)="onViewerPointerMove($event)" (pointerup)="onViewerPointerUp($event)"
+        (pointercancel)="onViewerPointerUp($event)" (pointerleave)="onViewerPointerUp($event)">
+        <img [src]="viewerImageUrl" class="viewer-image" [class.dragging]="isViewerDragging"
+            [style.transform]="'translate(' + viewerPanX + 'px, ' + viewerPanY + 'px) scale(' + viewerZoom + ')'"
+            (pointerdown)="onViewerPointerDown($event)" (click)="$event.stopPropagation()" draggable="false">
+    </div>
+
+    <!-- Gallery Counter -->
+    <div class="viewer-counter">
+        {{ currentViewerIndex + 1 }} / {{ imgData().length }}
+    </div>
+</div>
+}
+
+<!-- Video Viewer Modal Overlay -->
+@if (isVideoViewerOpen) {
+<div class="video-viewer-overlay" (click)="closeVideoViewer()">
+    <!-- Navigation Buttons -->
+    @if (vidData().length > 1) {
+    <button class="nav-btn prev" (click)="prevVideo($event)" [disabled]="currentVideoIndex <= 0" title="Video trước">
+        <i class="bi bi-chevron-left"></i>
+    </button>
+    <button class="nav-btn next" (click)="nextVideo($event)" [disabled]="currentVideoIndex >= vidData().length - 1"
+        title="Video sau">
+        <i class="bi bi-chevron-right"></i>
+    </button>
+    }
+
+    <!-- Close Button -->
+    <button class="close-viewer" (click)="closeVideoViewer()">
+        <i class="bi bi-x-lg"></i>
+    </button>
+
+    <!-- Viewer Content -->
+    <div class="viewer-content video" (click)="$event.stopPropagation()">
+        <video [src]="viewerVideoUrl" controls autoplay class="viewer-video"></video>
+    </div>
+
+    <!-- Gallery Counter -->
+    <div class="viewer-counter">
+        {{ currentVideoIndex + 1 }} / {{ vidData().length }}
+    </div>
+</div>
+}
+
+<!-- ============================================================
+     ADD MEMBER MODAL
+     ============================================================ -->
+@if (isAddMemberModalOpen) {
+<div class="modal-overlay" (click)="closeAddMemberModal()">
+    <div class="modal-card add-member-modal" (click)="$event.stopPropagation()">
+        <div class="modal-card-header">
+            <h3 class="modal-title">Thêm thành viên</h3>
+            <button class="modal-close-btn" (click)="closeAddMemberModal()">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+
+        <div class="modal-card-body">
+            <div class="search-box-wrapper">
+                <i class="bi bi-search search-icon"></i>
+                <input class="add-member-search-input" type="text" [(ngModel)]="addMemberSearchQuery"
+                    placeholder="Tìm kiếm bạn bè..." [disabled]="isLoadingFriends">
+            </div>
+
+            @if (addMemberError) {
+            <div class="add-member-error">
+                <i class="bi bi-exclamation-circle"></i> {{ addMemberError }}
+            </div>
+            }
+
+            <div class="friends-selection-list">
+                @if (isLoadingFriends) {
+                <!-- Loading state -->
+                <div class="friends-loading-state">
+                    <div class="friends-spinner">
+                        <div class="spinner-ring"></div>
+                    </div>
+                    <p>Đang tải danh sách bạn bè...</p>
+                </div>
+                } @else {
+                @for (friend of filteredFriends; track friend.friend_id) {
+                <label class="friend-select-item" [class.selected]="selectedFriendIds.has(friend.friend_id)">
+                    <div class="friend-select-info">
+                        <img class="friend-select-avatar" [src]="friend.avatar_url || 'assets/AvatarDefault.jpg'"
+                            alt="Avatar">
+                        <div class="friend-select-meta">
+                            <div class="friend-select-name">{{ friend.full_name }}</div>
+                            <div class="friend-select-email">{{ friend.email }}</div>
+                        </div>
+                    </div>
+                    <div class="friend-select-checkbox">
+                        <input type="checkbox" [checked]="selectedFriendIds.has(friend.friend_id)"
+                            (change)="toggleFriendSelection(friend.friend_id, $any($event.target).checked)">
+                        <span class="custom-checkbox"></span>
+                    </div>
+                </label>
+                } @empty {
+                <div class="friends-empty-state">
+                    <i class="bi bi-people"></i>
+                    <p>Không tìm thấy bạn bè nào có thể thêm.</p>
+                </div>
+                }
+                }
+            </div>
+        </div>
+
+        <div class="modal-card-footer">
+            <button class="modal-cancel-btn" (click)="closeAddMemberModal()">Hủy</button>
+            <button class="modal-submit-btn" [disabled]="selectedFriendIds.size === 0 || isAddingMembers"
+                (click)="submitAddMembers()">
+                @if (isAddingMembers) {
+                <span class="spinner-border spinner-border-sm me-2"></span> Đang thêm...
+                } @else {
+                Thêm ({{ selectedFriendIds.size }})
+                }
+            </button>
+        </div>
+    </div>
+</div>
+}

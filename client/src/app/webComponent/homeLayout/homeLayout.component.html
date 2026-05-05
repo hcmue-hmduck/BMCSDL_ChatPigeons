@@ -1,0 +1,555 @@
+<div class="pt-6">
+    <!-- Navbar -->
+    <nav class="max-w-7xl px-6">
+        <div class="glass-panel nav-container">
+            <div style="display: flex; align-items: center; gap: 0.75rem">
+                <div class="logo-icon">
+                    <i class="bi bi-shield-lock" style="font-size: 1.5rem"></i>
+                </div>
+                <span
+                    class="text-xl font-black tracking-tighter uppercase text-white neon-glow"
+                    style="
+                        font-size: 1.25rem;
+                        font-weight: 900;
+                        letter-spacing: -0.05em;
+                        color: white;
+                    "
+                >
+                    Pigeons
+                </span>
+            </div>
+
+            <div class="nav-links">
+                @for (item of ['Tính năng', 'Giao thức', 'Mạng lưới', 'Bảng giá']; track item) {
+                    <a href="#" class="nav-link">{{ item }}</a>
+                }
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 1rem">
+                <button
+                    style="
+                        font-size: 0.875rem;
+                        font-weight: 700;
+                        color: var(--slate-400);
+                        transition: color 0.2s;
+                    "
+                    onmouseover="this.style.color = 'var(--primary)'"
+                    onmouseout="this.style.color = 'var(--slate-400)'"
+                    (click)="goToLogin()"
+                >
+                    Đăng nhập
+                </button>
+                <button
+                    class="bubble-me text-slate-900 px-6 py-2.5 rounded-xl font-black transition-all"
+                    style="
+                        padding: 0.625rem 1.5rem;
+                        border-radius: 0.75rem;
+                        font-size: 0.875rem;
+                        font-weight: 900;
+                        color: #0f172a;
+                    "
+                    (click)="goToSignup()"
+                >
+                    Bắt đầu ngay
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl px-6">
+        <!-- Hero Section -->
+        <section class="hero-grid">
+            <div class="space-y-8 animate-hero-text">
+                <div class="badge">
+                    <span class="ping-container">
+                        <span class="ping-animate"></span>
+                        <span class="ping-dot"></span>
+                    </span>
+                    Mã hóa thế hệ mới đã sẵn sàng
+                </div>
+
+                <h1 class="hero-title">
+                    Tương lai của <br />
+                    Trò chuyện <span class="text-gradient neon-glow">Bảo mật</span>
+                </h1>
+
+                <p class="hero-p">
+                    Trải nghiệm giao diện cao cấp, công nghệ cao với hiệu ứng kính mờ (glassmorphism) 
+                    và quyền riêng tư cấp quân đội. Được xây dựng cho web hiện đại với tốc độ vô song.
+                </p>
+
+                <div class="hero-btns">
+                    <button class="bubble-me btn-primary">Tạo Kho lưu trữ Riêng tư</button>
+                    <button class="glass-card btn-secondary">Xem Giao thức</button>
+                </div>
+
+                <div class="hero-stats">
+                    <div class="avatars">
+                        @for (i of [1, 2, 3]; track i) {
+                            <img
+                                [src]="'https://picsum.photos/seed/user' + i + '/100/100'"
+                                alt="User"
+                            />
+                        }
+                    </div>
+                    <p class="stats-text">
+                        Được tin dùng bởi hơn <span style="color: white">2 triệu nhà phát triển</span>
+                    </p>
+                </div>
+            </div>
+
+            <div class="hero-visual animate-hero-visual">
+                <div class="glow-bg"></div>
+                <div class="mockup-container glass-panel">
+                    <div class="mockup-inner">
+                        <img
+                            class="mockup-img"
+                            src="https://picsum.photos/seed/cyber/1200/900"
+                            alt="Dashboard Mockup"
+                        />
+                        <div class="mockup-overlay glass-panel">
+                            <div class="pulse-bar">
+                                <div class="dot"></div>
+                                <div class="bar-m"></div>
+                                <div class="bar-s"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section class="features-grid">
+            @for (
+                feature of [
+                    {
+                        icon: 'bi-zap',
+                        title: 'Giao diện Tinh khiết',
+                        desc: 'Một giao diện đầy sức sống. Hiệu ứng kính mờ hiệu suất cao mang lại trải nghiệm tập trung, không gây xao nhãng.',
+                    },
+                    {
+                        icon: 'bi-lock',
+                        title: 'Kho lưu trữ AES-256',
+                        desc: 'Tin nhắn là của riêng bạn. Mã hóa đầu cuối đảm bảo rằng ngay cả chúng tôi cũng không thể đọc dữ liệu riêng tư của bạn.',
+                    },
+                    {
+                        icon: 'bi-lightning-fill',
+                        title: 'Đồng bộ Siêu tốc',
+                        desc: 'Xây dựng trên các giao thức độ trễ thấp. Truyền tin nhắn tức thời trên tất cả các thiết bị của bạn chỉ trong vài mili giây.',
+                    },
+                ];
+                track feature.title
+            ) {
+                <div class="glass-panel feature-card">
+                    <div class="feature-icon-wrap">
+                        <i [class]="'bi ' + feature.icon + ' feature-icon'"></i>
+                    </div>
+                    <h3 class="feature-h">{{ feature.title }}</h3>
+                    <p class="feature-p">{{ feature.desc }}</p>
+                </div>
+            }
+        </section>
+
+        <!-- Auth Section -->
+        <section id="auth-section" style="padding: 5rem 0">
+            <div class="glass-panel auth-container">
+                <div class="auth-grid">
+                    <div class="auth-visual">
+                        <img
+                            src="https://picsum.photos/seed/secure/800/800"
+                            class="auth-img"
+                            alt="Secure Background"
+                        />
+                        <div class="auth-visual-content">
+                            <h4 class="auth-visual-h">Truy cập Bảo mật</h4>
+                            <p class="auth-visual-p">
+                                Truy cập không gian làm việc được mã hóa của bạn với các khóa sinh trắc học cấp độ phần cứng.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="auth-form-wrap">
+                        <div class="auth-tabs">
+                            <button
+                                class="auth-tab"
+                                [class.active]="isLogin()"
+                                [class.inactive]="!isLogin()"
+                                (click)="goToLogin({ isScroll: false })"
+                            >
+                                Đăng nhập
+                            </button>
+                            <button
+                                class="auth-tab"
+                                [class.active]="!isLogin()"
+                                [class.inactive]="isLogin()"
+                                (click)="goToSignup({ isScroll: false })"
+                            >
+                                Đăng ký
+                            </button>
+                        </div>
+
+                        @if (isLogin()) {
+                            <!-- Login Form -->
+                            <form
+                                style="display: flex; flex-direction: column; gap: 1.5rem"
+                                [formGroup]="formLogin"
+                                (submit)="handleLogin($event)"
+                            >
+                                <div class="form-group">
+                                    <label class="form-label">Email</label>
+                                    <div class="input-wrap">
+                                        <i class="bi bi-envelope input-icon"></i>
+                                        <input
+                                            class="input-field"
+                                            [class.input-error]="
+                                                shouldShowError(formLogin, 'email', loginSubmitted)
+                                            "
+                                            placeholder="user@gmail.com"
+                                            type="email"
+                                            autocomplete="email"
+                                            formControlName="email"
+                                        />
+                                    </div>
+                                    @if (shouldShowError(formLogin, 'email', loginSubmitted)) {
+                                        <p class="field-error">
+                                            {{ getErrorMessage(formLogin, 'email') }}
+                                        </p>
+                                    }
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Mật khẩu</label>
+                                    <div class="input-wrap">
+                                        <i class="bi bi-lock input-icon"></i>
+                                        <input
+                                            class="input-field"
+                                            [class.input-error]="
+                                                shouldShowError(
+                                                    formLogin,
+                                                    'password',
+                                                    loginSubmitted
+                                                )
+                                            "
+                                            placeholder="••••••••••••"
+                                            [type]="showLoginPassword() ? 'text' : 'password'"
+                                            autocomplete="current-password"
+                                            formControlName="password"
+                                        />
+                                        <button 
+                                            type="button" 
+                                            class="password-toggle"
+                                            (click)="showLoginPassword.set(!showLoginPassword())"
+                                        >
+                                            <i class="bi" [class.bi-eye-slash]="!showLoginPassword()" [class.bi-eye]="showLoginPassword()"></i>
+                                        </button>
+                                    </div>
+                                    @if (shouldShowError(formLogin, 'password', loginSubmitted)) {
+                                        <p class="field-error">
+                                            {{ getErrorMessage(formLogin, 'password') }}
+                                        </p>
+                                    }
+                                </div>
+
+                                <div class="auth-options">
+                                    <!-- <label class="remember-me">
+                                        <input type="checkbox" formControlName="remember" />
+                                        <span>Remember Node</span>
+                                    </label> -->
+                                    <button class="lost-key" type="button" (click)="showForgotModal.set(true)">Quên mật khẩu?</button>
+                                </div>
+
+                                <button type="submit" class="bubble-me btn-auth">
+                                    XÁC THỰC TRUY CẬP
+                                    <i
+                                        class="bi bi-box-arrow-in-right"
+                                        style="font-size: 1.25rem"
+                                    ></i>
+                                </button>
+                                @if (loginErrorMessage() !== '') {
+                                    <p class="field-error">{{ loginErrorMessage() }}</p>
+                                }
+                            </form>
+                        } @else {
+                            <!-- Register Form -->
+                            <form
+                                style="display: flex; flex-direction: column; gap: 1.25rem"
+                                [formGroup]="formSignup"
+                                (submit)="handleSignup($event)"
+                            >
+                                <div class="form-group">
+                                    <label class="form-label">Họ và tên</label>
+                                    <div class="input-wrap">
+                                        <i class="bi bi-person input-icon"></i>
+                                        <input
+                                            class="input-field"
+                                            [class.input-error]="
+                                                shouldShowError(
+                                                    formSignup,
+                                                    'full_name',
+                                                    signupSubmitted
+                                                )
+                                            "
+                                            placeholder="Cyber Operative"
+                                            type="text"
+                                            formControlName="full_name"
+                                        />
+                                    </div>
+                                    @if (
+                                        shouldShowError(formSignup, 'full_name', signupSubmitted)
+                                    ) {
+                                        <p class="field-error">
+                                            {{ getErrorMessage(formSignup, 'full_name') }}
+                                        </p>
+                                    }
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Email</label>
+                                    <div class="input-wrap">
+                                        <i class="bi bi-envelope input-icon"></i>
+                                        <input
+                                            class="input-field"
+                                            [class.input-error]="
+                                                shouldShowError(
+                                                    formSignup,
+                                                    'email',
+                                                    signupSubmitted
+                                                )
+                                            "
+                                            placeholder="user@gmail.com"
+                                            type="email"
+                                            autocomplete="email"
+                                            formControlName="email"
+                                        />
+                                    </div>
+                                    @if (shouldShowError(formSignup, 'email', signupSubmitted)) {
+                                        <p class="field-error">
+                                            {{ getErrorMessage(formSignup, 'email') }}
+                                        </p>
+                                    }
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Mật khẩu</label>
+                                    <div class="input-wrap">
+                                        <i class="bi bi-lock input-icon"></i>
+                                        <input
+                                            class="input-field"
+                                            [class.input-error]="
+                                                shouldShowError(
+                                                    formSignup,
+                                                    'password',
+                                                    signupSubmitted
+                                                )
+                                            "
+                                            placeholder="••••••••••••"
+                                            [type]="showSignupPassword() ? 'text' : 'password'"
+                                            autocomplete="new-password"
+                                            formControlName="password"
+                                        />
+                                        <button 
+                                            type="button" 
+                                            class="password-toggle"
+                                            (click)="showSignupPassword.set(!showSignupPassword())"
+                                        >
+                                            <i class="bi" [class.bi-eye-slash]="!showSignupPassword()" [class.bi-eye]="showSignupPassword()"></i>
+                                        </button>
+                                    </div>
+                                    @if (shouldShowError(formSignup, 'password', signupSubmitted)) {
+                                        <p class="field-error">
+                                            {{ getErrorMessage(formSignup, 'password') }}
+                                        </p>
+                                    }
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Xác nhận mật khẩu</label>
+                                    <div class="input-wrap">
+                                        <i class="bi bi-shield-check input-icon"></i>
+                                        <input
+                                            class="input-field"
+                                            [class.input-error]="
+                                                shouldShowError(
+                                                    formSignup,
+                                                    'confirm_password',
+                                                    signupSubmitted
+                                                )
+                                            "
+                                            placeholder="••••••••••••"
+                                            [type]="showSignupConfirmPassword() ? 'text' : 'password'"
+                                            autocomplete="new-password"
+                                            formControlName="confirm_password"
+                                        />
+                                        <button 
+                                            type="button" 
+                                            class="password-toggle"
+                                            (click)="showSignupConfirmPassword.set(!showSignupConfirmPassword())"
+                                        >
+                                            <i class="bi" [class.bi-eye-slash]="!showSignupConfirmPassword()" [class.bi-eye]="showSignupConfirmPassword()"></i>
+                                        </button>
+                                    </div>
+                                    @if (
+                                        shouldShowError(
+                                            formSignup,
+                                            'confirm_password',
+                                            signupSubmitted
+                                        )
+                                    ) {
+                                        <p class="field-error">
+                                            {{ getErrorMessage(formSignup, 'confirm_password') }}
+                                        </p>
+                                    }
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    class="bubble-me btn-auth"
+                                    style="margin-top: 0.5rem"
+                                >
+                                    KHỞI TẠO DANH TÍNH
+                                    <i class="bi bi-plus-circle" style="font-size: 1.125rem"></i>
+                                </button>
+                                @if (signupErrorMessage() !== '') {
+                                    <p class="field-error">{{ signupErrorMessage() }}</p>
+                                }
+                            </form>
+                        }
+
+                        <div class="external-auth">
+                            <p class="external-label">Giao thức bên thứ ba</p>
+                            <div class="external-grid">
+                                <a class="glass-card btn-external" [href]="apiUrl + '/google'">
+                                    <i class="bi bi-google" style="font-size: 1rem"></i>
+                                    Google
+                                </a>
+                                <a class="glass-card btn-external" [href]="apiUrl + '/github'">
+                                    <i class="bi bi-github" style="font-size: 1rem"></i>
+                                    GitHub
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-container">
+            <div class="footer-logo">
+                <div class="footer-logo-icon">
+                    <i class="bi bi-shield-lock" style="font-size: 1.25rem"></i>
+                </div>
+                <span
+                    class="text-white neon-glow"
+                    style="font-size: 1.125rem; font-weight: 900; text-transform: uppercase"
+                >
+                    Pigeons
+                </span>
+            </div>
+
+            <div class="footer-links">
+                @for (item of ['Bảo mật', 'Minh bạch', 'Mã API', 'Trạng thái']; track item) {
+                    <a href="#" class="footer-link">{{ item }}</a>
+                }
+            </div>
+
+            <div class="footer-socials">
+                <button class="glass-card btn-social">
+                    <i class="bi bi-share" style="font-size: 1.25rem"></i>
+                </button>
+                <button class="glass-card btn-social">
+                    <i class="bi bi-envelope" style="font-size: 1.25rem"></i>
+                </button>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            © 2024 Pigeons • Hệ thống Mã hóa • Được xây dựng cho một tương lai an toàn
+        </div>
+    </footer>
+
+    @if (showVerifyModal()) {
+        <div class="verify-modal-overlay" (click)="handleModalBackdropClick($event)">
+            <div class="verify-modal glass-panel" role="dialog" aria-modal="true">
+                <header class="verify-header">
+                    <div class="verify-brand">
+                        <div class="verify-brand-icon">
+                            <i class="bi bi-shield-lock" style="font-size: 1rem"></i>
+                        </div>
+                        <h2>Pigeons</h2>
+                    </div>
+                    <div class="verify-chip">
+                        <i class="bi bi-shield-lock-fill" style="font-size: 0.625rem"></i>
+                        <span>SECURE PROTOCOL</span>
+                    </div>
+                </header>
+
+                <div class="verify-content">
+                    <div class="verify-title-wrap">
+                        <h3>XÁC THỰC <span>EMAIL</span></h3>
+                        <p>Kiểm tra danh tính</p>
+                        <p class="verify-subtitle">
+                            Nhập mã gồm 6 chữ số đã được gửi đến {{ verifyEmail() || 'email của bạn' }}
+                        </p>
+                    </div>
+
+                    <div class="verify-code-grid">
+                        @for (digit of verifyCode(); track $index) {
+                            <input
+                                [id]="'verify-digit-' + $index"
+                                class="verify-code-input"
+                                type="text"
+                                inputmode="numeric"
+                                autocomplete="one-time-code"
+                                maxlength="1"
+                                [value]="digit"
+                                [placeholder]="digit ? '' : '·'"
+                                (input)="onCodeInput($index, $event)"
+                                (keydown)="onCodeKeydown($index, $event)"
+                            />
+                        }
+                    </div>
+
+                    <div class="verify-meta-row">
+                        <div class="verify-meta-block">
+                            <span class="verify-meta-label">Trạng thái</span>
+                            <div class="verify-status-live">
+                                <span class="verify-ping"></span>
+                                <span>{{ isAuthenticating() ? 'ĐANG XÁC THỰC...' : 'ĐANG ĐỢI ĐỒNG BỘ' }}</span>
+                            </div>
+                        </div>
+                        <div class="verify-divider"></div>
+                        <div class="verify-meta-block">
+                            <span class="verify-meta-label">Gửi lại sau</span>
+                            <span class="verify-countdown">{{ getCountdownDisplay() }}</span>
+                        </div>
+                    </div>
+
+                    <button
+                        class="verify-resend"
+                        type="button"
+                        [disabled]="isResendingOtp() || countdown() > 0"
+                        (click)="sendOtp()"
+                    >
+                        <i class="bi bi-arrow-clockwise" style="font-size: 0.75rem"></i>
+                        Yêu cầu mã mới
+                    </button>
+
+                    @if (verifyErrorMessage() !== '') {
+                        <p class="field-error" style="text-align: center">{{ verifyErrorMessage() }}</p>
+                    }
+                </div>
+
+                <button class="verify-close" type="button" (click)="closeVerifyModal()" aria-label="Close">
+                    <i class="bi bi-x-lg" style="font-size: 0.875rem"></i>
+                </button>
+            </div>
+        </div>
+    }
+
+    @if (showForgotModal()) {
+        <forgot-password-modal (close)="showForgotModal.set(false)"></forgot-password-modal>
+    }
+</div>

@@ -1,0 +1,8 @@
+node_modules
+.env
+
+uploads
+./src/views/
+.DS_Store
+SeedDB_ChatPigeons.sql
+test_vision.js

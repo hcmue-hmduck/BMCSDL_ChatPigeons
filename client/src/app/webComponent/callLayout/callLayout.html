@@ -1,0 +1,166 @@
+<div class="video-call-overlay">
+    @if (isDeclined() || isNoAnswer() || isCallEnded()) {
+        <div class="end-call-screen status-overlay">
+            <div class="status-content">
+                <div class="status-chip">
+                    <i class="bi bi-telephone-x"></i>
+                    <span>Cuộc gọi kết thúc</span>
+                </div>
+
+                @if (!isCallEnded()) {
+                    <div class="avatar-group">
+                        @if (waitingIsGroup()) {
+                            <div class="status-group-avatar">
+                                <app-group-avatar-layout
+                                    [members]="waitingMembers()"
+                                    [isGroup]="true"
+                                    [avatarUrl]="avatarWrap?.avatarUrl ?? null"
+                                    [size]="120"
+                                ></app-group-avatar-layout>
+                            </div>
+                        } @else {
+                            <img [src]="waitingAvatarUrl()" class="status-avatar" />
+                        }
+                        <div class="status-avatar-glow"></div>
+
+                        @if (isDeclined()) {
+                            <div class="icon-badge declined"><i class="bi bi-x-lg"></i></div>
+                        } @else if (isNoAnswer()) {
+                            <div class="icon-badge missed"><i class="bi bi-clock-history"></i></div>
+                        } @else {
+                            <div class="icon-badge ended"><i class="bi bi-check-lg"></i></div>
+                        }
+                    </div>
+                }
+
+                @if (isDeclined()) {
+                    <h2 class="status-title">Cuộc gọi đã bị từ chối</h2>
+                    <p class="status-desc">Người nhận hiện không thể trả lời cuộc gọi của bạn</p>
+                } @else if (isNoAnswer()) {
+                    <h2 class="status-title">Không có phản hồi</h2>
+                    <p class="status-desc">Người nhận hiện không thể trả lời cuộc gọi của bạn</p>
+                } @else {
+                    @if (isGroupContext() && isCallEnded()) {
+                        <h2 class="status-title">Bạn đã rời cuộc gọi</h2>
+                        <p class="status-desc">Cảm ơn bạn đã sử dụng dịch vụ của Pigeons</p>
+                    } @else {
+                        <h2 class="status-title">Cuộc gọi đã kết thúc</h2>
+                        <p class="status-desc">Cảm ơn bạn đã sử dụng dịch vụ của Pigeons</p>
+                    }
+                }
+
+                <div class="status-actions">
+                    <button class="btn-close primary" (click)="closeCallWindow()">Thoát</button>
+                </div>
+            </div>
+        </div>
+    } @else {
+        <div
+            class="call-container"
+            [class.two-people]="isTwoPeople()"
+            [class.group-call]="isGroupCall()"
+            [class.group-3]="isGroupCall() && totalCount() === 3"
+            [class.group-4]="isGroupCall() && totalCount() === 4"
+            [class.group-5plus]="isGroupCall() && totalCount() >= 5"
+        >
+            @if (isWaiting()) {
+                <div class="waiting-overlay">
+                    <div class="background-blur">
+                        <img [src]="waitingAvatarUrl()" />
+                    </div>
+                    <div class="waiting-content">
+                        <div class="avatar-wrapper">
+                            @if (waitingIsGroup()) {
+                                <app-group-avatar-layout
+                                    [members]="waitingMembers()"
+                                    [isGroup]="true"
+                                    [avatarUrl]="avatarWrap?.avatarUrl ?? null"
+                                    [size]="160"
+                                ></app-group-avatar-layout>
+                            } @else {
+                                <img [src]="waitingAvatarUrl()" class="caller-avatar" />
+                            }
+                            <div class="pulse-ring"></div>
+                            <div class="pulse-ring delay-1"></div>
+                            <div class="pulse-ring delay-2"></div>
+                        </div>
+                        <h3 class="ringing-text">Đang đổ chuông...</h3>
+                        <p class="waiting-subtext">Đang chờ người nhận phản hồi</p>
+                    </div>
+                </div>
+            }
+
+            @for (participant of callState.remoteParticipants(); track participant.participantId) {
+                <div class="remote-container">
+                    <audio [srcObject]="participant.audioStream" autoplay></audio>
+
+                    @if (!participant.hasAudio) {
+                        <div class="remote-mic-off" title="Mic đang tắt" aria-label="Mic đang tắt">
+                            <i class="bi bi-mic-mute-fill"></i>
+                        </div>
+                    }
+
+                    @if (participant.hasVideo) {
+                        <video
+                            class="remote-video"
+                            [srcObject]="participant.videoStream"
+                            autoplay
+                            playsinline
+                        ></video>
+                    } @else {
+                        <div class="avatar-container">
+                            <img
+                                [src]="participant.participantAvatarUrl"
+                                (error)="(avatarUrlDefault)"
+                                [alt]="participant.participantName"
+                                class="avatar-image"
+                            />
+                        </div>
+                    }
+
+                    <div class="name">{{ participant.participantName }}</div>
+                </div>
+            }
+
+            <div class="local-container">
+                @if (callState.isCameraOn()) {
+                    <video
+                        class="local-video"
+                        [srcObject]="callState.localStream()"
+                        autoplay
+                        playsinline
+                        [muted]="true"
+                    ></video>
+                } @else {
+                    <div class="avatar-container">
+                        <img
+                            [src]="userAvatarUrl()"
+                            (error)="(avatarUrlDefault)"
+                            alt="Bạn"
+                            class="avatar-image"
+                        />
+                    </div>
+                }
+                <div class="name">Bạn</div>
+            </div>
+
+            <div class="controls">
+                <div class="btn" [class.off]="!callState.isCameraOn()" (click)="toggleCamera()">
+                    <i
+                        class="bi"
+                        [class.bi-camera-video-fill]="callState.isCameraOn()"
+                        [class.bi-camera-video-off-fill]="!callState.isCameraOn()"
+                    ></i>
+                </div>
+                <div class="btn" [class.off]="!callState.isMicOn()" (click)="toggleMicrophone()">
+                    <i
+                        class="bi"
+                        [class.bi-mic-fill]="callState.isMicOn()"
+                        [class.bi-mic-mute-fill]="!callState.isMicOn()"
+                    ></i>
+                </div>
+                <div class="btn end" (click)="endCall()"><i class="fa-solid fa-phone-slash"></i></div>
+            </div>
+        </div>
+    }
+</div>

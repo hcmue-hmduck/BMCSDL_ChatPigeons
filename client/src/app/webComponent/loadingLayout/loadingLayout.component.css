@@ -1,0 +1,225 @@
+:host {
+    display: block;
+    width: 100%;
+    height: 100vh;
+}
+
+.loading-container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    width: 100%;
+    background-color: var(--app-bg, #0b0e14);
+    color: #f1f5f9;
+    font-family: 'Inter', sans-serif;
+    overflow: hidden;
+}
+
+/* Grid Background */
+.grid-bg {
+    background-image:
+        linear-gradient(to right, rgba(187, 134, 252, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(187, 134, 252, 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+}
+
+/* Header */
+.loading-header {
+    position: absolute;
+    top: 0;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 32px 48px;
+}
+
+.logo-area {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    opacity: 0.9;
+}
+
+.logo-icon {
+    color: var(--accent, var(--accent));
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.logo-text {
+    font-size: 18px;
+    font-weight: 800;
+    margin: 0;
+    letter-spacing: -0.05em;
+    text-transform: uppercase;
+}
+
+.encrypted-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: monospace;
+    font-size: 10px;
+    color: rgba(187, 134, 252, 0.6);
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+}
+
+.pulse-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--accent, var(--accent));
+    box-shadow: 0 0 8px rgba(187, 134, 252, 0.8);
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.4;
+    }
+}
+
+/* Main Content */
+.loading-main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 320px;
+}
+
+.loader-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 40px;
+}
+
+.loader-visual {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.spinning-ring {
+    width: 112px;
+    height: 112px;
+    border-radius: 50%;
+    border: 2px solid #1e293b;
+    /* slate-800 */
+    border-top-color: var(--accent, var(--accent));
+    animation: spin 3s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.fingerprint-icon {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(187, 134, 252, 0.8);
+    font-size: 36px;
+}
+
+.loader-glow {
+    position: absolute;
+    width: 112px;
+    height: 112px;
+    border-radius: 50%;
+    background-color: rgba(187, 134, 252, 0.05);
+    filter: blur(20px);
+}
+
+/* Status Text */
+.status-area {
+    text-align: center;
+}
+
+.status-title {
+    color: var(--accent, var(--accent));
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+}
+
+.bouncing-dots {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+}
+
+.dot {
+    width: 4px;
+    height: 4px;
+    background-color: var(--accent, var(--accent));
+    border-radius: 50%;
+    animation: bounce 0.6s ease-in-out infinite;
+    animation-delay: var(--delay);
+}
+
+@keyframes bounce {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-4px);
+    }
+}
+
+/* Footer */
+.loading-footer {
+    position: absolute;
+    bottom: 40px;
+    width: 100%;
+    text-align: center;
+    padding: 0 24px;
+}
+
+.footer-note {
+    font-size: 9px;
+    font-family: monospace;
+    color: #334155;
+    /* slate-700 */
+    text-transform: uppercase;
+    letter-spacing: 0.5em;
+    margin: 0;
+}
+
+/* Scanlines Effect */
+.scanlines {
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%),
+        linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+    background-size: 100% 4px, 3px 100%;
+}

@@ -1,0 +1,138 @@
+:host {
+	display: inline-flex;
+}
+
+.group-avatar-root {
+	--group-size: 112px;
+	--bg-color: rgba(8, 16, 42, 0.9);
+	--border-width: 2px;
+	--frame-border: 2px;
+	--gray-text: #9da3ae;
+	width: var(--group-size);
+	height: var(--group-size);
+	line-height: 0;
+}
+
+.single-avatar-wrap {
+	width: 100%;
+	height: 100%;
+	border-radius: 50%;
+	border: var(--frame-border) solid var(--accent-light);
+	box-shadow: 0 0 12px rgba(187, 134, 252, 0.18), 0 2px 6px rgba(0, 0, 0, 0.40);
+	overflow: hidden;
+	background: rgba(8, 16, 42, 0.35);
+	box-sizing: border-box;
+}
+
+.single-avatar-img {
+	width: 100%;
+	height: 100%;
+	border-radius: 50%;
+	object-fit: cover;
+}
+
+.zalo-group {
+	width: var(--group-size);
+	height: var(--group-size);
+	position: relative;
+	border-radius: 50%;
+	border: var(--frame-border) solid var(--accent-light);
+	box-shadow: 0 0 12px rgba(187, 134, 252, 0.18), 0 2px 6px rgba(0, 0, 0, 0.40);
+	background: var(--bg-color);
+	box-sizing: border-box;
+}
+
+.avatar-item {
+	position: absolute;
+	border-radius: 50%;
+	object-fit: cover;
+	border: var(--border-width) solid var(--bg-color);
+	box-sizing: border-box;
+	background-color: #3e444d;
+}
+
+.group-3 .avatar-item {
+	width: 58%;
+	height: 58%;
+}
+
+.group-3 .avatar-item:nth-child(1) {
+	top: 0;
+	left: 50%;
+	transform: translateX(-50%);
+	z-index: 10;
+}
+
+.group-3 .avatar-item:nth-child(2) {
+	bottom: 5%;
+	left: 0;
+	z-index: 11;
+}
+
+.group-3 .avatar-item:nth-child(3) {
+	bottom: 5%;
+	right: 0;
+	z-index: 12;
+}
+
+.group-3 .avatar-item:only-child {
+	width: 72%;
+	height: 72%;
+	top: 50%;
+	left: 50%;
+	bottom: auto;
+	right: auto;
+	transform: translate(-50%, -50%);
+}
+
+.group-4plus .avatar-item,
+.group-4plus .more-count {
+	width: 52%;
+	height: 52%;
+}
+
+.group-4plus .avatar-item:nth-child(1) {
+	top: 0;
+	left: 0;
+	z-index: 10;
+}
+
+.group-4plus .avatar-item:nth-child(2) {
+	top: 0;
+	right: 0;
+	z-index: 11;
+}
+
+.group-4plus .avatar-item:nth-child(3) {
+	bottom: 0;
+	left: 0;
+	z-index: 12;
+}
+
+.more-count {
+	position: absolute;
+	right: 0;
+	bottom: 0;
+	background-color: #3e444d;
+	border: var(--border-width) solid var(--bg-color);
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--gray-text);
+	font-weight: 600;
+	font-size: calc(var(--group-size) * 0.22);
+	z-index: 13;
+	box-sizing: border-box;
+}
+
+.group-fallback {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--accent);
+	font-size: calc(var(--group-size) * 0.3);
+	background: rgba(187, 134, 252, 0.08);
+}

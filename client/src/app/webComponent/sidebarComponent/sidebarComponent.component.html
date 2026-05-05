@@ -1,0 +1,37 @@
+<div class="app-shell">
+    <aside class="icon-sidebar">
+        <img src="assets/PigeonLogo.ico" alt="Pigeons" class="sidebar-logo" (click)="goToMessagesWelcome()">
+        <nav class="nav-icons">
+            <button class="sidebar-nav-btn" [class.active]="isActive('messages')" title="Tin nhắn"
+                (click)="setView('messages')">
+                <i class="bi bi-chat-dots"></i>
+                <span class="nav-tooltip">Tin nhắn</span>
+            </button>
+            <button class="sidebar-nav-btn" [class.active]="isActive('friends')" title="Liên hệ"
+                (click)="setView('friends')">
+                <i class="bi bi-people"></i>
+                <span class="nav-tooltip">Liên hệ</span>
+            </button>
+        </nav>
+        <!-- User Avatar & Modal Trigger -->
+        <div class="sidebar-bottom">
+            <!-- User Avatar if ready -->
+            <img [src]="userInfo()?.avatar_url" alt="avatar" class="sidebar-user-avatar" title="Hồ sơ cá nhân"
+                *ngIf="userInfo()" (click)="userProfileModal.open(userInfo())">
+
+            <!-- Placeholder if loading -->
+            <div class="sidebar-user-avatar-placeholder" *ngIf="!userInfo()">
+                <i class="bi bi-person"></i>
+            </div>
+            <button class="sidebar-logout-btn" title="Đăng xuất" (click)="handleLogout()">
+                <i class="bi bi-box-arrow-right"></i>
+                <span class="nav-tooltip">Đăng xuất</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Child Profile Modal Component -->
+    <user-infor-modal #userProfileModal [currentUserId]="currentUserId()" [editPremission]="true"
+        (profileUpdated)="handleProfileUpdate($event)">
+    </user-infor-modal>
+</div>

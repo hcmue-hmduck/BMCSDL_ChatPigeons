@@ -1,0 +1,402 @@
+<!-- ── PROFILE MODAL ── -->
+<div class="pf-overlay" *ngIf="showProfileModal()" (click)="closeProfileModal()">
+    <div class="pf-modal" (click)="$event.stopPropagation()">
+        <!-- Loading State -->
+        <div
+            *ngIf="loadingUser()"
+            style="
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                width: 100%;
+                height: 100%;
+                min-height: 400px;
+            "
+        >
+            <div class="spinner-accent"></div>
+            <p style="margin-top: 15px; color: var(--text-2)">Đang tải dữ liệu...</p>
+        </div>
+
+        <ng-container *ngIf="!loadingUser() && userInfo() as user">
+            <!-- Processing Overlay -->
+            <div class="pf-processing-overlay" *ngIf="isProcessing()">
+                <div class="pf-spinner-wrap">
+                    <div class="pf-spinner"></div>
+                    <div class="pf-spinner-glow"></div>
+                </div>
+                <span class="pf-processing-text">Đang xử lý...</span>
+            </div>
+
+            <!-- LEFT panel -->
+            <div class="pf-panel-left">
+                <div class="pf-deco pf-deco-1"></div>
+                <div class="pf-deco pf-deco-2"></div>
+                <div class="pf-deco pf-deco-3"></div>
+                <input
+                    #fileInput
+                    type="file"
+                    accept="image/*"
+                    style="display: none"
+                    (change)="onAvatarFileSelected($event)"
+                />
+                <div class="pf-avatar-ring">
+                    <img [src]="user.avatar_url" alt="avatar" class="pf-avatar-img" />
+                    <button
+                        class="pf-cam-btn"
+                        title="Đổi ảnh đại diện"
+                        (click)="changeAvatar()"
+                        [disabled]="uploadingAvatar()"
+                    >
+                        <i
+                            class="bi"
+                            [class.bi-camera-fill]="!uploadingAvatar()"
+                            [class.bi-arrow-repeat]="uploadingAvatar()"
+                        ></i>
+                    </button>
+                </div>
+                <h4 class="pf-name">{{ user.full_name || 'Người dùng' }}</h4>
+                <div class="pf-online-badge"><span class="pf-online-dot"></span> Trực tuyến</div>
+            </div>
+
+            <!-- RIGHT panel -->
+            <div class="pf-panel-right">
+                <button class="pf-close-btn" (click)="closeProfileModal()">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+
+                <!-- VIEW MODE -->
+                <ng-container
+                    *ngIf="!isEditingProfile() && !showChangePassword() && !showSetPassword()"
+                >
+                    <div class="pf-section-title">Thông tin cá nhân</div>
+                    <div class="pf-rows">
+                        <div class="pf-row" *ngIf="user.bio">
+                            <div class="pf-row-icon"><i class="bi bi-chat-quote-fill"></i></div>
+                            <div class="pf-row-body">
+                                <div class="pf-row-label">Tiểu sử</div>
+                                <div class="pf-row-value">{{ user.bio }}</div>
+                            </div>
+                        </div>
+                        <div class="pf-row">
+                            <div class="pf-row-icon"><i class="bi bi-envelope-fill"></i></div>
+                            <div class="pf-row-body">
+                                <div class="pf-row-label">Email</div>
+                                <div class="pf-row-value pf-row-inline">
+                                    <span>{{ user.email }}</span>
+                                    <span
+                                        class="pf-badge pf-badge-ok"
+                                        *ngIf="user.is_email_verified"
+                                        ><i class="bi bi-check-circle-fill"></i> Xác thực</span
+                                    >
+                                    <span
+                                        class="pf-badge pf-badge-warn"
+                                        *ngIf="!user.is_email_verified"
+                                        ><i class="bi bi-exclamation-circle-fill"></i> Chưa xác
+                                        thực</span
+                                    >
+                                </div>
+                            </div>
+                        </div>
+                        <div class="pf-row">
+                            <div class="pf-row-icon"><i class="bi bi-phone-fill"></i></div>
+                            <div class="pf-row-body">
+                                <div class="pf-row-label">Số điện thoại</div>
+                                <div class="pf-row-value pf-row-inline">
+                                    <span>{{ user.phone_number || 'Chưa cập nhật' }}</span>
+                                    <span
+                                        class="pf-badge pf-badge-ok"
+                                        *ngIf="user.is_phone_verified"
+                                        ><i class="bi bi-check-circle-fill"></i> Xác thực</span
+                                    >
+                                    <span
+                                        class="pf-badge pf-badge-warn"
+                                        *ngIf="!user.is_phone_verified"
+                                        ><i class="bi bi-exclamation-circle-fill"></i> Chưa xác
+                                        thực</span
+                                    >
+                                </div>
+                            </div>
+                        </div>
+                        <div class="pf-row" *ngIf="user.birthday">
+                            <div class="pf-row-icon"><i class="bi bi-cake2-fill"></i></div>
+                            <div class="pf-row-body">
+                                <div class="pf-row-label">Ngày sinh</div>
+                                <div class="pf-row-value">
+                                    {{ user.birthday | date: 'dd/MM/yyyy' }}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="pf-row" *ngIf="user.gender">
+                            <div class="pf-row-icon">
+                                <i
+                                    class="bi"
+                                    [class.bi-gender-male]="user.gender === 'male'"
+                                    [class.bi-gender-female]="user.gender === 'female'"
+                                    [class.bi-gender-ambiguous]="
+                                        user.gender !== 'male' && user.gender !== 'female'
+                                    "
+                                ></i>
+                            </div>
+                            <div class="pf-row-body">
+                                <div class="pf-row-label">Giới tính</div>
+                                <div class="pf-row-value">
+                                    <span
+                                        class="pf-gender-chip"
+                                        [class.pf-gender-male]="user.gender === 'male'"
+                                        [class.pf-gender-female]="user.gender === 'female'"
+                                        [class.pf-gender-other]="
+                                            user.gender !== 'male' && user.gender !== 'female'
+                                        "
+                                    >
+                                        {{
+                                            user.gender === 'male'
+                                                ? 'Nam'
+                                                : user.gender === 'female'
+                                                  ? 'Nữ'
+                                                  : 'Khác'
+                                        }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="pf-stat-row">
+                        <div class="pf-stat" *ngIf="user.created_at">
+                            <span class="pf-stat-label">NGÀY THAM GIA</span
+                            ><span class="pf-stat-value">{{
+                                user.created_at | date: 'dd/MM/yyyy'
+                            }}</span>
+                        </div>
+                        <div class="pf-stat" *ngIf="user.updated_at">
+                            <span class="pf-stat-label">CẬP NHẬT LẦN CUỐI</span
+                            ><span class="pf-stat-value">{{
+                                user.updated_at | date: 'dd/MM/yyyy, HH:mm'
+                            }}</span>
+                        </div>
+                    </div>
+                    <div class="pf-actions" *ngIf="editPremission === true">
+                        <button class="pf-btn pf-btn-primary" (click)="toggleEditProfile()">
+                            <i class="bi bi-pencil-fill"></i> Thay đổi
+                        </button>
+                        @if (userInfo().hasPassword) {
+                            <button class="pf-btn pf-btn-outline" (click)="toggleChangePassword()">
+                                <i class="bi bi-shield-lock-fill"></i> Đổi mật khẩu
+                            </button>
+                        } @else {
+                            <button class="pf-btn pf-btn-outline" (click)="toggleSetPassword()">
+                                <i class="bi bi-shield-lock-fill"></i> Thiết lập mật khẩu
+                            </button>
+                        }
+                    </div>
+                </ng-container>
+
+                <!-- EDIT MODE -->
+                <ng-container *ngIf="isEditingProfile()">
+                    <div class="pf-section-title">
+                        <i class="bi bi-pencil-fill me-1" style="color: var(--accent)"></i> Chỉnh
+                        sửa hồ sơ
+                    </div>
+                    <div class="pf-form">
+                        <div class="pf-field">
+                            <label>Họ và tên</label
+                            ><input
+                                type="text"
+                                class="form-control form-control-sm pf-input"
+                                [(ngModel)]="editForm.full_name"
+                            />
+                        </div>
+                        <div class="pf-field">
+                            <label>Tiểu sử</label
+                            ><input
+                                type="text"
+                                class="form-control form-control-sm pf-input"
+                                [(ngModel)]="editForm.bio"
+                            />
+                        </div>
+                        <div class="pf-field">
+                            <label>Email</label
+                            ><input
+                                type="email"
+                                class="form-control form-control-sm pf-input"
+                                [(ngModel)]="editForm.email"
+                            />
+                        </div>
+                        <div class="pf-field">
+                            <label>Số điện thoại</label
+                            ><input
+                                type="tel"
+                                class="form-control form-control-sm pf-input"
+                                [(ngModel)]="editForm.phone_number"
+                            />
+                        </div>
+                        <div class="pf-field">
+                            <label>Ngày sinh</label
+                            ><input
+                                type="date"
+                                class="form-control form-control-sm pf-input"
+                                [(ngModel)]="editForm.birthday"
+                            />
+                        </div>
+                        <div class="pf-field">
+                            <label>Giới tính</label>
+                            <select
+                                class="form-select form-select-sm pf-input"
+                                [(ngModel)]="editForm.gender"
+                            >
+                                <option value="">-- Chọn giới tính --</option>
+                                <option value="male">Nam</option>
+                                <option value="female">Nữ</option>
+                                <option value="other">Khác</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="pf-actions">
+                        <button class="pf-btn pf-btn-primary" (click)="saveProfile()">
+                            <i class="bi bi-check-lg"></i> Lưu thay đổi
+                        </button>
+                        <button class="pf-btn pf-btn-ghost" (click)="toggleEditProfile()">
+                            Huỷ
+                        </button>
+                    </div>
+                </ng-container>
+
+                <!-- CHANGE PASSWORD MODE -->
+                <ng-container *ngIf="showChangePassword() && !isEditingProfile()">
+                    <div class="pf-section-title pf-title-danger">
+                        <i class="bi bi-shield-lock-fill me-1"></i> Đổi mật khẩu
+                    </div>
+                    <form [formGroup]="changePasswordForm" (ngSubmit)="saveChangePassword()">
+                        <div class="pf-form">
+                            <div class="pf-field">
+                                <label>Mật khẩu hiện tại</label
+                                ><input
+                                    type="password"
+                                    class="form-control form-control-sm pf-input"
+                                    formControlName="oldPassword"
+                                />
+                                <!-- Hiển thị lỗi mật khẩu cũ sai từ Server trả về -->
+                                @if (changePasswordForm.get('oldPassword')?.hasError('incorrect')) {
+                                    <small class="text-danger mt-1 d-block">
+                                        <span>Mật khẩu hiện tại không chính xác.</span>
+                                    </small>
+                                }
+                            </div>
+
+                            <div class="pf-field">
+                                <label>Mật khẩu mới</label
+                                ><input
+                                    type="password"
+                                    class="form-control form-control-sm pf-input"
+                                    formControlName="newPassword"
+                                />
+                            </div>
+                            <!-- Hiển thị lỗi (nếu có) -->
+                            @if (
+                                changePasswordForm.get('newPassword')?.invalid &&
+                                changePasswordForm.get('newPassword')?.touched
+                            ) {
+                                <small class="text-danger mt-1 d-block">
+                                    <span
+                                        >Mật khẩu phải có ít nhất 6 ký tự bao gồm có chữ hoa, chữ
+                                        thường, số và kí tự đặc biệt</span
+                                    >
+                                </small>
+                            }
+
+                            <div class="pf-field">
+                                <label>Xác nhận mật khẩu mới</label
+                                ><input
+                                    type="password"
+                                    class="form-control form-control-sm pf-input"
+                                    formControlName="confirmPassword"
+                                />
+                            </div>
+                            <!-- Lỗi xác nhận mật khẩu không khớp -->
+                            @if (
+                                changePasswordForm.hasError('passwordMismatch') &&
+                                changePasswordForm.get('confirmPassword')?.touched
+                            ) {
+                                <small class="text-danger mt-1 d-block">
+                                    <span>Mật khẩu xác nhận không khớp.</span>
+                                </small>
+                            }
+                        </div>
+                        <div class="pf-actions">
+                            <button class="pf-btn pf-btn-danger" type="submit">
+                                <i class="bi bi-check-lg"></i> Xác nhận
+                            </button>
+                            <button class="pf-btn pf-btn-ghost" (click)="toggleChangePassword()">
+                                Huỷ
+                            </button>
+                        </div>
+                    </form>
+                </ng-container>
+
+                <!-- Modal set password -->
+                <ng-container *ngIf="showSetPassword() && !isEditingProfile()">
+                    <div class="pf-section-title pf-title-danger">
+                        <i class="bi bi-shield-lock-fill me-1"></i> Thiết lập mật khẩu
+                    </div>
+
+                    <form [formGroup]="setPasswordForm" (ngSubmit)="setPassword()">
+                        <div class="pf-form">
+                            <div class="pf-field">
+                                <label>Mật khẩu mới</label
+                                ><input
+                                    type="password"
+                                    class="form-control form-control-sm pf-input"
+                                    formControlName="password"
+                                />
+                            </div>
+                            <!-- Hiển thị lỗi (nếu có) -->
+                            @if (
+                                setPasswordForm.get('password')?.invalid &&
+                                setPasswordForm.get('password')?.touched
+                            ) {
+                                <small class="text-danger mt-1 d-block">
+                                    <span
+                                        >Mật khẩu phải có ít nhất 6 ký tự bao gồm có chữ hoa, chữ
+                                        thường, số và kí tự đặc biệt</span
+                                    >
+                                </small>
+                            }
+
+                            <div class="pf-field">
+                                <label>Xác nhận mật khẩu mới</label
+                                ><input
+                                    type="password"
+                                    class="form-control form-control-sm pf-input"
+                                    formControlName="confirm_password"
+                                />
+                            </div>
+                            <!-- Lỗi xác nhận mật khẩu không khớp -->
+                            @if (
+                                setPasswordForm.hasError('passwordMismatch') &&
+                                setPasswordForm.get('confirm_password')?.touched
+                            ) {
+                                <small class="text-danger mt-1 d-block">
+                                    <span>Mật khẩu xác nhận không khớp.</span>
+                                </small>
+                            }
+                        </div>
+
+                        <!-- button -->
+                        <div class="pf-actions">
+                            <button
+                                type="submit"
+                                class="pf-btn pf-btn-danger"
+                                [disabled]="setPasswordForm.invalid"
+                            >
+                                <i class="bi bi-check-lg"></i> Xác nhận
+                            </button>
+                            <button class="pf-btn pf-btn-ghost" (click)="toggleSetPassword()">
+                                Huỷ
+                            </button>
+                        </div>
+                    </form>
+                </ng-container>
+            </div>
+        </ng-container>
+    </div>
+</div>

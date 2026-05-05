@@ -1,0 +1,19 @@
+<div class="group-avatar-root" [style.--group-size]="cssSizePx">
+	<ng-container *ngIf="!isGroup || hasAvatarUrl; else generatedGroupAvatar">
+		<div class="single-avatar-wrap">
+			<img [src]="avatarUrl" [alt]="alt" class="single-avatar-img">
+		</div>
+	</ng-container>
+
+	<ng-template #generatedGroupAvatar>
+		<div class="zalo-group" [class.group-3]="isThreeLayout" [class.group-4plus]="isFourPlusLayout">
+			<ng-container *ngFor="let member of memberAvatars; let idx = index">
+				<img [src]="member.avatar_url" [alt]="member.full_name || ('member-' + idx)" class="avatar-item">
+			</ng-container>
+			<div class="more-count" *ngIf="isFourPlusLayout && extraCount > 0">{{ extraCount }}</div>
+			<div class="group-fallback" *ngIf="!memberAvatars.length">
+				<i class="bi bi-people-fill"></i>
+			</div>
+		</div>
+	</ng-template>
+</div>
