@@ -31,7 +31,7 @@ export class RelationshipLayoutComponent implements OnChanges, OnInit, OnDestroy
 
     // Tự động tính toán lại danh sách hiển thị khi friends hoặc currentSort thay đổi
     groupedFriends = computed(() => {
-        const rawFriends = this.relStore.friends().filter(f => !f.is_bot);
+        const rawFriends = this.relStore.friends();
         const sortOrder = this.currentSort();
         const grouped = this.groupFriendsByAlphabet(rawFriends);
 
@@ -82,8 +82,6 @@ export class RelationshipLayoutComponent implements OnChanges, OnInit, OnDestroy
             baseList = suggestions;
         }
 
-        // Lọc bỏ bot khỏi danh sách gợi ý và tìm kiếm
-        baseList = baseList.filter(u => !u.is_bot);
 
         // 2. Luôn cập nhật trạng thái mới nhất từ presence store cho tất cả người dùng trong danh sách
         return baseList.map(u => {

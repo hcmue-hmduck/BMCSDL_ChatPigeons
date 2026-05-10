@@ -47,28 +47,13 @@ const Conversation = sequelize.define('Conversation', {
         defaultValue: true,
         field: 'is_active'
     },
-    key_status: {
-        type: DataTypes.STRING(20),
-        defaultValue: 'no_key',
-        field: 'key_status',
-        validate: {
-            isIn: [['no_key', 'active', 'require_rotation']]
-        }
-    },
-    // allow_history_view: {
-    //     type: DataTypes.BOOLEAN,
-    //     defaultValue: true,
-    //     field: 'allow_history_view'
-    // },
     created_at: {
         type: DataTypes.DATE,
-        defaultValue: DataTypes.NOW,
-        allowNull: false,
+        allowNull: true,
         field: 'created_at'
     },
     updated_at: {
         type: DataTypes.DATE,
-        defaultValue: DataTypes.NOW,
         allowNull: true,
         field: 'updated_at'
     }

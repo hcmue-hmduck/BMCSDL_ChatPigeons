@@ -28,7 +28,7 @@ const Participant = sequelize.define('Participant', {
     },
     joined_at: {
         type: DataTypes.DATE,
-        defaultValue: DataTypes.NOW,
+        allowNull: true,
         field: 'joined_at'
     },
     left_at: {

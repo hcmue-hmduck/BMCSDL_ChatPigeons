@@ -6,7 +6,6 @@ const getUpdateData = (data, blackList = []) => {
         const value = data[key];
         cleanData[key] = (typeof value === 'string' && value.trim() === '') ? null : value;
     })
-    cleanData['updated_at'] = new Date();
     return cleanData;
 }
 

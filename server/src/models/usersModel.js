@@ -22,21 +22,6 @@ const User = sequelize.define('User', {
         }
     },
 
-    // Bot name
-    bot_name: {
-        type: DataTypes.STRING(50),
-        allowNull: true,
-        unique: true,
-        field: 'bot_name'
-    },
-
-    // Is Bot
-    is_bot: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false,
-        field: 'is_bot'
-    },
-
     // Password Hash
     password_hash: {
         type: DataTypes.STRING(250),
@@ -161,22 +146,19 @@ const User = sequelize.define('User', {
     // Created At
     created_at: {
         type: DataTypes.DATE,
-        defaultValue: DataTypes.NOW,
-        allowNull: false,
+        allowNull: true,
         field: 'created_at'
     },
 
     // Updated At
     updated_at: {
         type: DataTypes.DATE,
-        defaultValue: DataTypes.NOW,
         allowNull: true,
         field: 'updated_at'
     }
 }, {
     // Cấu hình bảng
     tableName: 'users',
-    schema: 'ChatPigeons',
     timestamps: false,
     freezeTableName: true,
     indexes: [

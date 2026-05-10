@@ -152,8 +152,8 @@
                     <button class="btn-disabled-glass" disabled>
                       <i class="bi bi-clock-history"></i>
                       Đã gửi yêu cầu
-                    </button>}
-                    @else if (!user.is_bot) {
+                    </button>
+                    } @else {
                     <button class="btn-primary-neon" (click)="sendFriendRequest(user.id)">
                       <i class="bi bi-person-plus-fill"></i>
                       Thêm bạn bè

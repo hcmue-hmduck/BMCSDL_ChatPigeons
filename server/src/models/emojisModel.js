@@ -45,13 +45,11 @@ const Emojis = sequelize.define('Emojis', {
     },
     created_at: {
         type: DataTypes.DATE,
-        defaultValue: DataTypes.NOW,
         allowNull: true,
         field: 'created_at'
     }
 }, {
     tableName: 'emojis',
-    schema: 'ChatPigeons',
     timestamps: false,
     freezeTableName: true,
     indexes: [

@@ -37,8 +37,7 @@ const Friends = sequelize.define('Friends', {
     // Ngày trở thành bạn bè
     friendship_date: {
         type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: DataTypes.NOW,
+        allowNull: true,
         field: 'friendship_date'
     },
 

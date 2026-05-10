@@ -36,12 +36,22 @@ const FriendRequests = sequelize.define('FriendRequests', {
     note: {
         type: DataTypes.STRING(500),
         allowNull: true
+    },
+    created_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        field: 'created_at'
+    },
+    updated_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        field: 'updated_at'
     }
 }, {
     tableName: 'friendrequests',
-    timestamps: true,
-    createdAt: 'created_at',
-    updatedAt: 'updated_at',
+    timestamps: false,
+    createdAt: false,
+    updatedAt: false,
     indexes: [
         {
             unique: true,

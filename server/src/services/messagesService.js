@@ -129,7 +129,6 @@ class MessagesService {
     // Cập nhật message
     async updateMessage(messageId, messageData) {
         messageData.is_edited = true;
-        messageData.updated_at = new Date();
         const message = await messagesModel.findByPk(messageId);
         if (message) {
             return await message.update(messageData);
@@ -143,8 +142,7 @@ class MessagesService {
         if (message) {
             // Soft delete - chỉ đánh dấu is_deleted = true
             return await message.update({
-                is_deleted: true,
-                updated_at: new Date(),
+                is_deleted: true
             });
         }
         return null;

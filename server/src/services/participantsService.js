@@ -85,19 +85,15 @@ class ParticipantsService {
             // Đã từng tham gia → tái kích hoạt
             participant = await existing.update({
                 left_at: null,
-                joined_at: now,
                 role: participantData.role || existing.role,
                 nick_name: participantData.nick_name || existing.nick_name,
                 is_muted: participantData.is_muted ?? existing.is_muted,
-                updated_at: now,
             });
         } else {
             // Chưa từng tham gia → tạo mới
             participant = await participantsModel.create({
                 conversation_id,
                 ...participantData,
-                joined_at: now,
-                updated_at: now,
             });
         }
 
@@ -115,7 +111,6 @@ class ParticipantsService {
         if (participant) {
             return await participant.update({
                 ...participantData,
-                updated_at: new Date().toISOString(),
             });
         }
         return null;
@@ -137,7 +132,7 @@ class ParticipantsService {
         if (!participant) throw new BadRequestError('Bạn không phải thành viên của cuộc hội thoại này');
 
         const now = new Date().toISOString();
-        await participant.update({ left_at: now, updated_at: now });
+        await participant.update({ left_at: now });
 
         // Tự động đặt cờ cần xoay key
         await conversationsService.updateKeyStatus(conversation_id, 'require_rotation');
@@ -174,7 +169,7 @@ class ParticipantsService {
         if (targetParticipant.role === 'owner') throw new ForbiddenError('Không thể kick owner');
 
         const now = new Date().toISOString();
-        await targetParticipant.update({ left_at: now, updated_at: now });
+        await targetParticipant.update({ left_at: now });
 
         // Cập nhật key_status = require_rotation (Client của actor sẽ thực hiện rotate ngay) - đã rotate trên client
         await conversationsService.updateKeyStatus(conversation_id, 'require_rotation');

@@ -180,8 +180,7 @@ export class RelationshipStoreService {
                     friend_id: idToRemove,
                     full_name: friendToRemove.full_name,
                     avatar_url: friendToRemove.avatar_url,
-                    status: friendToRemove.status,
-                    is_bot: friendToRemove.is_bot
+                    status: friendToRemove.status
                 };
                 this.suggestions.update(list => {
                     if (!list.some(u => String(u.id) === String(idToRemove))) {
@@ -419,8 +418,7 @@ export class RelationshipStoreService {
                         friend_id: friendId,
                         full_name: friendToRemove.full_name,
                         avatar_url: friendToRemove.avatar_url,
-                        status: friendToRemove.status,
-                        is_bot: friendToRemove.is_bot
+                        status: friendToRemove.status
                     };
                     this.suggestions.update(list => {
                         if (!list.some(u => String(u.id) === String(friendId))) {

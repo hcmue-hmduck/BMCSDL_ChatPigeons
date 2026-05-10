@@ -40,15 +40,12 @@ class ConversationsService {
             created_by: created_by || null,
             last_message_id: last_message_id || null,
             last_message_at: last_message_at || null,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
         });
     }
 
     // Cập nhật conversation
     async updateConversation(conversationId, conversationData) {
         const conversation = await conversationsModel.findByPk(conversationId);
-        conversationData.updated_at = new Date().toISOString();
         if (conversation) {
             return await conversation.update(conversationData);
         }
@@ -60,8 +57,7 @@ class ConversationsService {
         const conversation = await conversationsModel.findByPk(conversationId);
         if (conversation) {
             await conversation.update({
-                is_active: false,
-                updated_at: new Date().toISOString(),
+                is_active: false
             });
             return true;
         }
@@ -77,8 +73,7 @@ class ConversationsService {
         if (!conversation) return null;
 
         return await conversation.update({
-            key_status: keyStatus,
-            updated_at: new Date().toISOString(),
+            key_status: keyStatus
         });
     }
 }

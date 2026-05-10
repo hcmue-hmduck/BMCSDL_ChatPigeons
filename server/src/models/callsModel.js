@@ -39,26 +39,12 @@ const Call = sequelize.define('Call', {
     started_at: {
         type: DataTypes.DATE,
         allowNull: true,
-        field: 'started_at',
-        get() {
-            const rawValue = this.getDataValue('started_at');
-            if (!rawValue) return null;
-            const d = new Date(rawValue);
-            const pad = n => n.toString().padStart(2, '0');
-            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${d.getMilliseconds().toString().padStart(3, '0')}`;
-        }
+        field: 'started_at'
     },
     ended_at: {
         type: DataTypes.DATE,
         allowNull: true,
-        field: 'ended_at',
-        get() {
-            const rawValue = this.getDataValue('ended_at');
-            if (!rawValue) return null;
-            const d = new Date(rawValue);
-            const pad = n => n.toString().padStart(2, '0');
-            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${d.getMilliseconds().toString().padStart(3, '0')}`;
-        }
+        field: 'ended_at'
     },
     duration_seconds: {
         type: DataTypes.INTEGER,
@@ -76,29 +62,15 @@ const Call = sequelize.define('Call', {
     },
     created_at: {
         type: DataTypes.DATE,
-        field: 'created_at',
-        get() {
-            const rawValue = this.getDataValue('created_at');
-            if (!rawValue) return null;
-            const d = new Date(rawValue);
-            const pad = n => n.toString().padStart(2, '0');
-            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${d.getMilliseconds().toString().padStart(3, '0')}`;
-        }
+        field: 'created_at'
     },
     updated_at: {
         type: DataTypes.DATE,
-        field: 'updated_at',
-        get() {
-            const rawValue = this.getDataValue('updated_at');
-            if (!rawValue) return null;
-            const d = new Date(rawValue);
-            const pad = n => n.toString().padStart(2, '0');
-            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${d.getMilliseconds().toString().padStart(3, '0')}`;
-        }
+        field: 'updated_at'
     },
 }, {
     tableName: 'calls',
-    timestamps: true,
+    timestamps: false,
     freezeTableName: true,
     underscored: true
 });

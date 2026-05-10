@@ -1,4 +1,5 @@
 const callModel = require('../models/callsModel.js');
+const { sequelize } = require('../configs/sequelizeConfig');
 
 class CallService {
     async getCallById(call_id, options = {}) {
@@ -41,11 +42,12 @@ class CallService {
             message: 'status already assigned'
         }
 
-        if (status === 'ongoing') updateData.started_at = new Date();
+        if (status === 'ongoing') updateData.started_at = sequelize.fn('SYSDATETIMEOFFSET');
         else if (status === 'completed' && foundCall.started_at) {
-            updateData.ended_at = new Date();
+            const now = new Date();
+            updateData.ended_at = sequelize.fn('SYSDATETIMEOFFSET');
             const startLog = new Date(foundCall.started_at).getTime();
-            const endLog = updateData.ended_at.getTime();
+            const endLog = now.getTime();
 
             // Tính toán dựa trên miliseconds
             const duration_ms = endLog - startLog;
@@ -58,7 +60,7 @@ class CallService {
             where: {
                 id: call_id,
             },
-            returning: true,
+            returning: false, // BẮT BUỘC: false để không dùng OUTPUT clause (xung đột với Trigger)
             ...options,
         });
     }

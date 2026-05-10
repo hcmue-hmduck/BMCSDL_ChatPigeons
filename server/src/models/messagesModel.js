@@ -112,13 +112,11 @@ const Message = sequelize.define('Message', {
     },
     created_at: {
         type: DataTypes.DATE,
-        defaultValue: DataTypes.NOW,
-        allowNull: false,
+        allowNull: true,
         field: 'created_at'
     },
     updated_at: {
         type: DataTypes.DATE,
-        defaultValue: DataTypes.NOW,
         allowNull: true,
         field: 'updated_at'
     }

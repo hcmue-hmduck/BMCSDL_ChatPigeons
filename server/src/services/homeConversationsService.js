@@ -33,7 +33,7 @@ class HomeConversationService {
         const allRelevantMessageIds = [...new Set([...lastMessageIds, ...lastReadMessageIds])];
 
         const [users, allRelevantMessages] = await Promise.all([
-            usersService.getAllUsers({ id: userIds }, { includeBotsWithoutPublicKey: true }),
+            usersService.getAllUsers({ id: userIds }),
             allRelevantMessageIds.length > 0 ? messagesService.getMessagesByIds(allRelevantMessageIds) : Promise.resolve([]),
         ]);
 
@@ -74,8 +74,6 @@ class HomeConversationService {
                     is_muted: p.is_muted,
                     is_pinned: p.is_pinned,
                     last_read_message_id: p.last_read_message_id,
-                    is_bot: user.is_bot,
-                    bot_name: user.bot_name
                 }
                 : {
                     user_id: p.user_id,
@@ -181,7 +179,6 @@ class HomeConversationService {
                 birthday: currentUser.birthday,
                 gender: currentUser.gender,
                 last_online_at: currentUser.last_online_at,
-                is_bot: currentUser.is_bot,
             }
             : null;
 
@@ -242,8 +239,7 @@ class HomeConversationService {
         if (participants_id) allUserIds.push(participants_id);
 
         const users = await usersService.getAllUsers(
-            { id: allUserIds },
-            { includeBotsWithoutPublicKey: true },
+            { id: allUserIds }
         );
         const usersMap = new Map(users.map(u => [String(u.id), u]));
 
@@ -254,8 +250,6 @@ class HomeConversationService {
                 full_name: user.full_name,
                 avatar_url: user.avatar_url,
                 last_online_at: user.last_online_at,
-                is_bot: user.is_bot,
-                bot_name: user.bot_name
             } : p;
         };
 
@@ -282,8 +276,7 @@ class HomeConversationService {
 
         const allUserIds = [created_by, ...participants_ids];
         const users = await usersService.getAllUsers(
-            { id: allUserIds },
-            { includeBotsWithoutPublicKey: true },
+            { id: allUserIds }
         );
         const usersMap = new Map(users.map(u => [String(u.id), u]));
 
@@ -294,8 +287,6 @@ class HomeConversationService {
                 full_name: user.full_name,
                 avatar_url: user.avatar_url,
                 last_online_at: user.last_online_at,
-                is_bot: user.is_bot,
-                bot_name: user.bot_name
             } : p;
         };
 

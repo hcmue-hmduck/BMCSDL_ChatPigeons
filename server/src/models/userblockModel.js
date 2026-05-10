@@ -27,13 +27,17 @@ const UserBlocks = sequelize.define('UserBlocks', {
     },
     reason: {
         type: DataTypes.STRING(500),
-        allowNull: true
+        allowNull: true,
+        field: 'reason'
+    },
+    created_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        field: 'created_at'
     }
 }, {
     tableName: 'userblocks',
-    timestamps: true,
-    createdAt: 'created_at',
-    updatedAt: false, // Bảng SQL không có updated_at
+    timestamps: false,
     indexes: [
         {
             unique: true,

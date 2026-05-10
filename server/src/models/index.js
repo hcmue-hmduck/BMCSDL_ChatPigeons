@@ -9,6 +9,7 @@ const PinnedMessages = require('./pinnedmessagesModel');
 const Friends = require('./friendsModel');
 const FriendRequest = require('./friendrequestsModel');
 const UserBlock = require('./userblockModel');
+const GroupJoinRequest = require('./groupjoinrequestsModel');
 
 
 
@@ -29,6 +30,7 @@ const models = {
     Friends,
     FriendRequest,
     UserBlock,
+    GroupJoinRequest,
 
 
 

@@ -7,21 +7,9 @@ const { getUpdateData } = require('../utils/dataUtil.js');
 class UsersService {
     // Lấy users theo điều kiện filter
     async getAllUsers(where = {}, options = {}) {
-        const { includeBotsWithoutPublicKey = false } = options;
         const resolvedWhere = { is_active: true, ...where };
 
-        if (includeBotsWithoutPublicKey) {
-            resolvedWhere[Op.and] = [
-                {
-                    [Op.or]: [
-                        { public_key: { [Op.ne]: null } },
-                        { is_bot: true },
-                    ],
-                },
-            ];
-        } else {
-            resolvedWhere.public_key = { [Op.ne]: null };
-        }
+        resolvedWhere.public_key = { [Op.ne]: null };
 
         if (where.id) {
             resolvedWhere.id = Array.isArray(where.id) ? { [Op.in]: where.id } : where.id;
@@ -65,9 +53,16 @@ class UsersService {
 
     // Tạo user mới
     async createUser(userData) {
-        userData.created_at = new Date().toISOString();
-        userData.updated_at = new Date().toISOString();
-        return await usersModel.create(userData);
+        try {
+            // Để SQL Server tự xử lý DEFAULT CURRENT_TIMESTAMP
+            return await usersModel.create(userData);
+        } catch (error) {
+            console.error('DETAILED SIGNUP ERROR:', error);
+            if (error.parent) {
+                console.error('SQL SERVER ORIGINAL ERROR:', error.parent.message);
+            }
+            throw error;
+        }
     }
 
     async findOrCreateSocialUser({ displayName, email }) {
@@ -84,41 +79,6 @@ class UsersService {
         return foundUser;
     }
 
-    // Tạo bot user
-    async createBotUser(full_name, bot_name, options = {}) {
-        if (!full_name || !bot_name) throw new BadRequestError('missing parameters');
-
-        const foundBotUser = await usersModel.findOne({ where: { bot_name, is_bot: true } });
-        if (foundBotUser) throw new BadRequestError('bot username has exists');
-
-        return await usersModel.create(
-            {
-                full_name,
-                bot_name,
-                is_bot: true,
-            },
-            options,
-        );
-    }
-
-    async updateBotUser(bot_user_id, { full_name, bot_name }) {
-        const foundBotUser = await usersModel.findByPk(bot_user_id);
-        if (!foundBotUser) throw new BadRequestError(`bot user doesn't exists`);
-
-        if (bot_name) {
-            const foundBotName = await usersModel.findOne({
-                where: {
-                    is_bot: true,
-                    bot_name,
-                    id: { [Op.ne]: bot_user_id },
-                },
-            });
-            if (foundBotName) throw new BadRequestError('bot name has exists');
-        }
-
-        const updateData = getUpdateData({ full_name, bot_name });
-        return await foundBotUser.update(updateData);
-    }
 
     // Cập nhật user
     async updateUser(userId, userData, options = {}) {
@@ -161,8 +121,7 @@ class UsersService {
         const user = await usersModel.findByPk(userId);
         if (user) {
             await user.update({
-                is_active: false,
-                updated_at: new Date().toISOString(),
+                is_active: false
             });
             return true;
         }

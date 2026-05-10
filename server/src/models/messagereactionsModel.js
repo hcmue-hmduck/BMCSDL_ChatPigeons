@@ -46,13 +46,11 @@ const MessageReaction = sequelize.define('MessageReaction', {
     },
     created_at: {
         type: DataTypes.DATE,
-        defaultValue: DataTypes.NOW,
         allowNull: true,
         field: 'created_at'
     }
 }, {
     tableName: 'message_reactions',
-    schema: 'ChatPigeons',
     timestamps: false,
     freezeTableName: true,
     indexes: [

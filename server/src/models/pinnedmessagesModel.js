@@ -26,8 +26,7 @@ const PinnedMessages = sequelize.define("PinnedMessages", {
     },
     pinned_at: {
         type: DataTypes.DATE,
-        defaultValue: DataTypes.NOW,
-        allowNull: false,
+        allowNull: true,
         field: 'pinned_at'
     },
     note: {

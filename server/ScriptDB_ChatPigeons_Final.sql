@@ -1,0 +1,328 @@
+/*
+=====================================================
+SCRIPT DATABASE CHATPIGEONS - SQL SERVER (MSSQL)
+Phiên bản: Final V2 (Đầy đủ created_at & updated_at)
+=====================================================
+*/
+
+-- 1. Tạo Database
+IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'ChatPigeons')
+BEGIN
+    CREATE DATABASE ChatPigeons;
+END
+GO
+
+USE ChatPigeons;
+GO
+
+-- 2. Dọn dẹp các bảng cũ nếu cần (Xóa chú thích -- nếu muốn reset database)
+/*
+IF OBJECT_ID('dbo.GroupJoinRequests', 'U') IS NOT NULL DROP TABLE dbo.GroupJoinRequests;
+IF OBJECT_ID('dbo.message_reactions', 'U') IS NOT NULL DROP TABLE dbo.message_reactions;
+IF OBJECT_ID('dbo.emojis', 'U') IS NOT NULL DROP TABLE dbo.emojis;
+IF OBJECT_ID('dbo.friends', 'U') IS NOT NULL DROP TABLE dbo.friends;
+IF OBJECT_ID('dbo.userblocks', 'U') IS NOT NULL DROP TABLE dbo.userblocks;
+IF OBJECT_ID('dbo.friendrequests', 'U') IS NOT NULL DROP TABLE dbo.friendrequests;
+IF OBJECT_ID('dbo.pinnedmessages', 'U') IS NOT NULL DROP TABLE dbo.pinnedmessages;
+IF OBJECT_ID('dbo.conversationkeysvault', 'U') IS NOT NULL DROP TABLE dbo.conversationkeysvault;
+IF OBJECT_ID('dbo.messages', 'U') IS NOT NULL DROP TABLE dbo.messages;
+IF OBJECT_ID('dbo.calls', 'U') IS NOT NULL DROP TABLE dbo.calls;
+IF OBJECT_ID('dbo.participants', 'U') IS NOT NULL DROP TABLE dbo.participants;
+IF OBJECT_ID('dbo.conversations', 'U') IS NOT NULL DROP TABLE dbo.conversations;
+IF OBJECT_ID('dbo.users', 'U') IS NOT NULL DROP TABLE dbo.users;
+*/
+GO
+
+-- 3. Bảng users
+CREATE TABLE users (
+    id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    email VARCHAR(100) NOT NULL UNIQUE,
+    password_hash VARCHAR(250),
+    full_name NVARCHAR(250),
+    bio NVARCHAR(500),
+    avatar_url VARCHAR(500),
+    phone_number VARCHAR(20),
+    birthday DATE,
+    gender VARCHAR(10) CHECK (gender IN ('male', 'female', 'other', 'unspecified')),
+    status VARCHAR(20) DEFAULT 'offline' CHECK (status IN ('online', 'offline', 'away', 'busy')),
+    role VARCHAR(20) DEFAULT 'user' CHECK (role IN ('user', 'admin')),
+    is_active BIT DEFAULT 1,
+    is_email_verified BIT DEFAULT 0,
+    is_phone_verified BIT DEFAULT 0,
+    last_online_at DATETIMEOFFSET,
+    public_key NVARCHAR(MAX),
+    wrapped_private_key NVARCHAR(MAX),
+    kek_iv VARCHAR(64),
+    pin_salt VARCHAR(64),
+    created_at DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET() NOT NULL,
+    updated_at DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET()
+);
+GO
+
+-- 4. Bảng conversations
+CREATE TABLE conversations (
+    id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    conversation_type VARCHAR(20) NOT NULL DEFAULT 'direct' CHECK (conversation_type IN ('direct', 'group')),
+    name NVARCHAR(255),
+    avatar_url VARCHAR(500),
+    created_by UNIQUEIDENTIFIER REFERENCES users(id) ON DELETE SET NULL,
+    last_message_id UNIQUEIDENTIFIER,
+    last_message_at DATETIMEOFFSET,
+    is_active BIT DEFAULT 1,
+    created_at DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET() NOT NULL,
+    updated_at DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET()
+);
+GO
+
+-- 5. Bảng participants
+CREATE TABLE participants (
+    id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    conversation_id UNIQUEIDENTIFIER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    user_id UNIQUEIDENTIFIER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role VARCHAR(20) DEFAULT 'member' CHECK (role IN ('member', 'admin', 'owner')),
+    joined_at DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET(),
+    left_at DATETIMEOFFSET NULL,
+    nick_name NVARCHAR(100),
+    is_muted BIT DEFAULT 0,
+    is_pinned BIT DEFAULT 0,
+    last_read_message_id UNIQUEIDENTIFIER,
+    created_at DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET() NOT NULL,
+    updated_at DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET(),
+    CONSTRAINT uq_participants UNIQUE(conversation_id, user_id)
+);
+GO
+
+-- 6. Bảng calls
+CREATE TABLE calls (
+    id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    conversation_id UNIQUEIDENTIFIER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    caller_id UNIQUEIDENTIFIER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    call_type VARCHAR(20) NOT NULL DEFAULT 'direct' CHECK (call_type IN ('direct', 'group')),
+    media_type VARCHAR(20) NOT NULL DEFAULT 'video' CHECK (media_type IN ('video', 'audio')),
+    started_at DATETIMEOFFSET,
+    ended_at DATETIMEOFFSET,
+    duration_seconds INTEGER,
+    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'ongoing', 'completed', 'missed', 'declined', 'cancelled')),
+    created_at DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET() NOT NULL,
+    updated_at DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET()
+);
+GO
+
+-- 7. Bảng messages
+CREATE TABLE messages (
+    id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    conversation_id UNIQUEIDENTIFIER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    sender_id UNIQUEIDENTIFIER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    message_type VARCHAR(20) DEFAULT 'text' CHECK (message_type IN ('text', 'image', 'file', 'audio', 'video', 'sticker', 'call', 'system')),
+    content NVARCHAR(MAX),
+    file_url VARCHAR(500),
+    file_size BIGINT,
+    file_name NVARCHAR(255),
+    thumbnail_url VARCHAR(500),
+    link_description NVARCHAR(500),
+    duration INTEGER,
+    call_id UNIQUEIDENTIFIER REFERENCES calls(id) ON DELETE NO ACTION,
+    has_link BIT DEFAULT 0,
+    is_edited BIT DEFAULT 0,
+    is_deleted BIT DEFAULT 0,
+    deleted_for_all BIT DEFAULT 0,
+    parent_message_id UNIQUEIDENTIFIER REFERENCES messages(id) ON DELETE NO ACTION,
+    is_e2ee BIT DEFAULT 0,
+    key_version INTEGER,
+    iv VARCHAR(64),
+    created_at DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET() NOT NULL,
+    updated_at DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET()
+);
+GO
+
+-- 8. Bảng conversationkeysvault
+CREATE TABLE conversationkeysvault (
+    id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    user_id UNIQUEIDENTIFIER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    conversation_id UNIQUEIDENTIFIER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    key_version INTEGER NOT NULL,
+    wrapped_shared_key NVARCHAR(MAX) NOT NULL,
+    created_at DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET() NOT NULL,
+    updated_at DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET()
+);
+GO
+
+-- 9. Bảng pinnedmessages
+CREATE TABLE pinnedmessages (
+    id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    message_id UNIQUEIDENTIFIER NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+    conversation_id UNIQUEIDENTIFIER NOT NULL REFERENCES conversations(id) ON DELETE NO ACTION,
+    pinned_by UNIQUEIDENTIFIER NOT NULL REFERENCES users(id) ON DELETE NO ACTION,
+    pinned_at DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET() NOT NULL, -- Vẫn giữ pinned_at theo yêu cầu cũ
+    note NVARCHAR(MAX),
+    order_index INTEGER DEFAULT 0,
+    is_deleted BIT DEFAULT 0,
+    created_at DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET() NOT NULL,
+    updated_at DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET(),
+    UNIQUE(message_id)
+);
+GO
+
+-- 10. Bảng friendrequests
+CREATE TABLE friendrequests (
+    id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    sender_id UNIQUEIDENTIFIER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    receiver_id UNIQUEIDENTIFIER NOT NULL REFERENCES users(id) ON DELETE NO ACTION,
+    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'rejected', 'blocked')),
+    note NVARCHAR(500),
+    created_at DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET() NOT NULL,
+    updated_at DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET(),
+    UNIQUE(sender_id, receiver_id)
+);
+GO
+
+-- 11. Bảng userblocks
+CREATE TABLE userblocks (
+    id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    blocker_id UNIQUEIDENTIFIER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    blocked_id UNIQUEIDENTIFIER NOT NULL REFERENCES users(id) ON DELETE NO ACTION,
+    reason NVARCHAR(500),
+    created_at DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET() NOT NULL,
+    updated_at DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET(),
+    UNIQUE(blocker_id, blocked_id)
+);
+GO
+
+-- 12. Bảng friends
+CREATE TABLE friends (
+    id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    user_id UNIQUEIDENTIFIER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    friend_id UNIQUEIDENTIFIER NOT NULL REFERENCES users(id) ON DELETE NO ACTION,
+    friendship_date DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET() NOT NULL,
+    is_favorite BIT DEFAULT 0,
+    notes NVARCHAR(500),
+    created_at DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET() NOT NULL,
+    updated_at DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET(),
+    UNIQUE(user_id, friend_id)
+);
+GO
+
+-- 13. Bảng emojis
+CREATE TABLE emojis (
+    id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    unicode_char NVARCHAR(10) NOT NULL,
+    name NVARCHAR(100) NOT NULL,
+    shortcode NVARCHAR(50) UNIQUE NOT NULL,
+    category NVARCHAR(50),
+    keywords NVARCHAR(MAX),
+    image_url NVARCHAR(255),
+    created_at DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET() NOT NULL,
+    updated_at DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET()
+);
+GO
+
+-- 14. Bảng message_reactions
+CREATE TABLE message_reactions (
+    id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    conversation_id UNIQUEIDENTIFIER NOT NULL REFERENCES conversations(id) ON DELETE NO ACTION,
+    message_id UNIQUEIDENTIFIER NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+    user_id UNIQUEIDENTIFIER NOT NULL REFERENCES users(id) ON DELETE NO ACTION,
+    emoji_char NVARCHAR(10) NOT NULL,
+    created_at DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET() NOT NULL,
+    updated_at DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET(),
+    UNIQUE(message_id, user_id, emoji_char)
+);
+GO
+
+-- 15. Bảng GroupJoinRequests
+CREATE TABLE GroupJoinRequests (
+    id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    user_id UNIQUEIDENTIFIER NOT NULL REFERENCES users(id) ON DELETE NO ACTION,
+    conversation_id UNIQUEIDENTIFIER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+    note NVARCHAR(500),
+    processed_by UNIQUEIDENTIFIER REFERENCES users(id) ON DELETE NO ACTION,
+    created_at DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET() NOT NULL,
+    updated_at DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET() NOT NULL
+);
+GO
+
+-- 16. Foreign Key bổ sung
+ALTER TABLE conversations
+ADD CONSTRAINT fk_conv_last_msg FOREIGN KEY (last_message_id) REFERENCES messages(id) ON DELETE NO ACTION;
+GO
+
+-- 17. TRIGGER TỰ ĐỘNG CẬP NHẬT updated_at (CHỈ DÀNH CHO SQL SERVER)
+
+CREATE TRIGGER trg_UpdateUsersUpdatedAt ON users AFTER UPDATE AS
+BEGIN
+    UPDATE users SET updated_at = SYSDATETIMEOFFSET() FROM users INNER JOIN inserted i ON users.id = i.id;
+END;
+GO
+
+CREATE TRIGGER trg_UpdateConversationsUpdatedAt ON conversations AFTER UPDATE AS
+BEGIN
+    UPDATE conversations SET updated_at = SYSDATETIMEOFFSET() FROM conversations INNER JOIN inserted i ON conversations.id = i.id;
+END;
+GO
+
+CREATE TRIGGER trg_UpdateParticipantsUpdatedAt ON participants AFTER UPDATE AS
+BEGIN
+    UPDATE participants SET updated_at = SYSDATETIMEOFFSET() FROM participants INNER JOIN inserted i ON participants.id = i.id;
+END;
+GO
+
+CREATE TRIGGER trg_UpdateMessagesUpdatedAt ON messages AFTER UPDATE AS
+BEGIN
+    UPDATE messages SET updated_at = SYSDATETIMEOFFSET() FROM messages INNER JOIN inserted i ON messages.id = i.id;
+END;
+GO
+
+CREATE TRIGGER trg_UpdateFriendRequestsUpdatedAt ON friendrequests AFTER UPDATE AS
+BEGIN
+    UPDATE friendrequests SET updated_at = SYSDATETIMEOFFSET() FROM friendrequests INNER JOIN inserted i ON friendrequests.id = i.id;
+END;
+GO
+
+CREATE TRIGGER trg_UpdateFriendsUpdatedAt ON friends AFTER UPDATE AS
+BEGIN
+    UPDATE friends SET updated_at = SYSDATETIMEOFFSET() FROM friends INNER JOIN inserted i ON friends.id = i.id;
+END;
+GO
+
+CREATE TRIGGER trg_UpdateVaultUpdatedAt ON conversationkeysvault AFTER UPDATE AS
+BEGIN
+    UPDATE conversationkeysvault SET updated_at = SYSDATETIMEOFFSET() FROM conversationkeysvault INNER JOIN inserted i ON conversationkeysvault.id = i.id;
+END;
+GO
+
+CREATE TRIGGER trg_UpdateCallsUpdatedAt ON calls AFTER UPDATE AS
+BEGIN
+    UPDATE calls SET updated_at = SYSDATETIMEOFFSET() FROM calls INNER JOIN inserted i ON calls.id = i.id;
+END;
+GO
+
+CREATE TRIGGER trg_UpdatePinnedMessagesUpdatedAt ON pinnedmessages AFTER UPDATE AS
+BEGIN
+    UPDATE pinnedmessages SET updated_at = SYSDATETIMEOFFSET() FROM pinnedmessages INNER JOIN inserted i ON pinnedmessages.id = i.id;
+END;
+GO
+
+CREATE TRIGGER trg_UpdateGroupJoinRequestsUpdatedAt ON GroupJoinRequests AFTER UPDATE AS
+BEGIN
+    UPDATE GroupJoinRequests SET updated_at = SYSDATETIMEOFFSET() FROM GroupJoinRequests INNER JOIN inserted i ON GroupJoinRequests.id = i.id;
+END;
+GO
+
+CREATE TRIGGER trg_UpdateUserBlocksUpdatedAt ON userblocks AFTER UPDATE AS
+BEGIN
+    UPDATE userblocks SET updated_at = SYSDATETIMEOFFSET() FROM userblocks INNER JOIN inserted i ON userblocks.id = i.id;
+END;
+GO
+
+CREATE TRIGGER trg_UpdateEmojisUpdatedAt ON emojis AFTER UPDATE AS
+BEGIN
+    UPDATE emojis SET updated_at = SYSDATETIMEOFFSET() FROM emojis INNER JOIN inserted i ON emojis.id = i.id;
+END;
+GO
+
+CREATE TRIGGER trg_UpdateMessageReactionsUpdatedAt ON message_reactions AFTER UPDATE AS
+BEGIN
+    UPDATE message_reactions SET updated_at = SYSDATETIMEOFFSET() FROM message_reactions INNER JOIN inserted i ON message_reactions.id = i.id;
+END;
+GO
