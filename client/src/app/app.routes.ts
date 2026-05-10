@@ -1,6 +1,8 @@
 import { Routes } from '@angular/router';
+import { AdminLayoutComponent } from './webComponent/adminLayout/adminLayout.component';
 import { HomeLayoutComponent } from './webComponent/homeLayout/homeLayout.component';
 import { CallLayoutComponent } from './webComponent/callLayout/callLayout';
+
 import { RelationshipLayoutComponent } from './webComponent/relationshipLayout/relationshipLayout.component';
 import { ConversationLayoutComponent } from './webComponent/conversationLayout/conversationLayout.component';
 import { MainLayoutComponent } from './webComponent/mainLayout/mainLayout.component';
@@ -40,11 +42,15 @@ export const routes: Routes = [
                     }
                 ]
             },
+
             {
                 path: 'relationship',
                 component: RelationshipLayoutComponent,
             }
         ]
     },
+    {
+        path: 'admin',
+        component: AdminLayoutComponent,
+    }
 ];
-

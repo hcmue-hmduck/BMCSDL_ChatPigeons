@@ -1,10 +1,26 @@
 const reasonPhrases = require('./reasonPhrases.js');
 const statusCodes = require('./statusCodes.js');
 
+const E2EEErrorCode = {
+    SERVER_KEY_VERSION_MISMATCH: 'E2EE_SERVER_KEY_VERSION_MISMATCH',
+    SERVER_IDENTITY_KEY_NOT_FOUND: 'E2EE_SERVER_IDENTITY_KEY_NOT_FOUND',
+    SERVER_VAULT_ALREADY_EXISTS: 'E2EE_SERVER_VAULT_ALREADY_EXISTS',
+    SERVER_VAULT_NOT_FOUND: 'SERVER_VAULT_NOT_FOUND',
+    CONVERSATION_KEY_ROTATION_REQUIRED: 'E2EE_CONVERSATION_KEY_ROTATION_REQUIRED',
+};
+
 class ErrorResponse extends Error {
-    constructor(message, status) {
+    constructor(message, status, errorCode) {
         super(message);
         this.status = status;
+        this.errorCode = errorCode;
+    }
+}
+
+// yêu cầu không hợp lệ
+class BadRequestError extends ErrorResponse {
+    constructor(message = reasonPhrases.BAD_REQUEST, status = statusCodes.BAD_REQUEST, errorCode) {
+        super(message, status, errorCode);
     }
 }
 
@@ -36,13 +52,6 @@ class NotFoundError extends ErrorResponse {
     }
 }
 
-// yêu cầu không hợp lệ
-class BadRequestError extends ErrorResponse {
-    constructor(message = reasonPhrases.BAD_REQUEST, status = statusCodes.BAD_REQUEST) {
-        super(message, status);
-    }
-}
-
 // lỗi hệ thống
 class InternalServerError extends ErrorResponse {
     constructor(message = reasonPhrases.INTERNAL_SERVER_ERROR, status = statusCodes.INTERNAL_SERVER_ERROR) {
@@ -57,6 +66,7 @@ class TooManyRequestError extends ErrorResponse {
 }
 
 module.exports = {
+    E2EEErrorCode,
     ConflictRequestError,
     UnauthorizedError,
     ForbiddenError,

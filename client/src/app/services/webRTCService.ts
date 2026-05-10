@@ -54,15 +54,42 @@ export class WebRtcService {
         this.socketService.on('call:missed', () => {
             if (this.callState.callSessionData()) {
                 this.callState.callStatus.set('missed');
-                console.log('nhận call:missed::', this.callState.callStatus());
             }
         });
 
         // đồng bộ call state status giữa tab cha và con
         this.socketService.on('call:syncCallState', (data) => {
+            const incomingConversationId = data?.conversationId || '';
+            const localConversationId = this.callState.conversationId;
+
             if (this.authService.getUserId() === data.userId) {
-                this.callState.callStatus.set(data.callStatus);
-                this.callState.isCaller.set(data.isCaller);
+                if (!localConversationId) {
+                    return;
+                }
+
+                if (
+                    localConversationId &&
+                    incomingConversationId &&
+                    localConversationId !== incomingConversationId
+                ) {
+                    return;
+                }
+
+                if (localConversationId && !incomingConversationId) {
+                    return;
+                }
+
+                const localStatus = this.callState.callStatus();
+                if (localStatus === 'connected' && data.callStatus === 'ringing') {
+                    return;
+                }
+
+                if (typeof data.callStatus === 'string') {
+                    this.callState.callStatus.set(data.callStatus);
+                }
+                if (typeof data.isCaller === 'boolean') {
+                    this.callState.isCaller.set(data.isCaller);
+                }
             }
         });
     }
@@ -88,7 +115,7 @@ export class WebRtcService {
         } else if (conversationType === GROUP_CALL) {
             this.livekit.call();
         } else {
-            console.log('Error: conversation type invalid');
+            // invalid conversation type
             return;
         }
 
@@ -106,7 +133,7 @@ export class WebRtcService {
         inviterId: string,
         inviterAvatarUrl: string,
     ) {
-        console.log('Accept incomming call');
+        // accept incoming call
         this.cleanUp();
         this.callState.conversationId = conversationId;
         this.callState.conversationType = conversationType;

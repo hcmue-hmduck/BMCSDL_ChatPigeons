@@ -32,6 +32,24 @@ const Message = sequelize.define('Message', {
         allowNull: true,
         field: 'content'
     },
+
+    is_e2ee: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+        field: 'is_e2ee'
+    },
+
+    key_version: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        field: 'key_version'
+    },
+    iv: {
+        type: DataTypes.STRING(64),
+        allowNull: true,
+        field: 'iv'
+    },
+
     file_url: {
         type: DataTypes.STRING(500),
         allowNull: true,
@@ -118,6 +136,16 @@ const Message = sequelize.define('Message', {
 
 // Associate với Call
 Message.associate = (models) => {
+    Message.belongsTo(models.User, {
+        foreignKey: 'sender_id',
+        as: 'sender'
+    });
+
+    Message.belongsTo(models.Conversation, {
+        foreignKey: 'conversation_id',
+        as: 'conversation'
+    });
+
     Message.belongsTo(models.Call, {
         foreignKey: 'call_id',
         as: 'call'

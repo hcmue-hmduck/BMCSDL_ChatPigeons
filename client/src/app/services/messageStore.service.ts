@@ -1,4 +1,5 @@
 import { Injectable, signal } from '@angular/core';
+import { Subject } from 'rxjs';
 
 export interface ConversationState {
     getMessagesData: any;
@@ -15,6 +16,10 @@ export interface ConversationState {
 export class MessageStoreService {
     // Cache map: conversationId -> ConversationState
     private cache = signal<Map<string, ConversationState>>(new Map());
+
+    // Subject để thông báo khi có tin nhắn mới được thêm vào cache (để các component khác cập nhật UI)
+    private messageAddedSubject = new Subject<{ convId: string; message: any }>();
+    messageAdded$ = this.messageAddedSubject.asObservable();
 
     /**
      * Lấy trạng thái từ cache hoặc tạo mặc định nếu chưa có
@@ -79,6 +84,9 @@ export class MessageStoreService {
             },
             lastMessageId: message.id
         });
+
+        // Phát sự kiện thông báo để các component khác (như messagesLayout) cập nhật UI ngay lập tức
+        this.messageAddedSubject.next({ convId, message });
     }
 
     /**

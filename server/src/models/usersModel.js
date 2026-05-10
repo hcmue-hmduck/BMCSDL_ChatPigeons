@@ -133,6 +133,31 @@ const User = sequelize.define('User', {
         field: 'last_online_at'
     },
 
+    // E2EE fields
+    public_key: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        field: 'public_key'
+    },
+
+    wrapped_private_key: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        field: 'wrapped_private_key'
+    },
+
+    kek_iv: {
+        type: DataTypes.STRING(64),
+        allowNull: true,
+        field: 'kek_iv'
+    },
+
+    pin_salt: {
+        type: DataTypes.STRING(64),
+        allowNull: true,
+        field: 'pin_salt'
+    },
+
     // Created At
     created_at: {
         type: DataTypes.DATE,

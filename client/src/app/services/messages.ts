@@ -31,24 +31,41 @@ export class Messages {
             duration?: number;
             link_description?: string;
             has_link?: boolean;
-        }
+        },
+        e2eePayload?: { iv: string; keyVersion: number }
     ): Observable<any> {
         const body: any = { senderId, content, message_type, ...file_metadata };
         if (replyTo) body.parent_message_id = replyTo;
+        if (e2eePayload) {
+            body.iv = e2eePayload.iv;
+            body.key_version = e2eePayload.keyVersion;
+            body.is_e2ee = true;
+        }
         return this.http.post(`${this.apiUrl}/${conversationId}`, body);
     }
 
-    putMessage(messageId: string, content: string): Observable<any> {
-        return this.http.put(`${this.apiUrl}/${messageId}`, { content });
+    putMessage(
+        messageId: string,
+        content: string,
+        e2eePayload?: { iv: string; keyVersion: number; isE2ee?: boolean },
+    ): Observable<any> {
+        const body: any = { content };
+        if (e2eePayload) {
+            body.iv = e2eePayload.iv;
+            body.key_version = e2eePayload.keyVersion;
+            body.is_e2ee = e2eePayload.isE2ee ?? true;
+        }
+        return this.http.put(`${this.apiUrl}/${messageId}`, body);
     }
 
     deleteMessage(messageId: string): Observable<any> {
         return this.http.delete(`${this.apiUrl}/${messageId}`);
     }
 
-    async streamSummaryMessages(
+
+    async streamSummaryMessagesFromPayload(
         conversationId: string,
-        fromLastReadMessageId: string,
+        messages: any[],
         handlers: {
             onChunk: (content: string) => void;
             onDone: () => void;
@@ -56,13 +73,14 @@ export class Messages {
         },
     ): Promise<void> {
         try {
-            const safeLastReadMessageId = encodeURIComponent(fromLastReadMessageId || 'null');
-            const response = await fetch(`${this.apiUrl}/${conversationId}/summary/${safeLastReadMessageId}`, {
-                method: 'GET',
+            const response = await fetch(`${this.apiUrl}/${conversationId}/summary`, {
+                method: 'POST',
                 credentials: 'include',
                 headers: {
                     Accept: 'text/event-stream',
+                    'Content-Type': 'application/json',
                 },
+                body: JSON.stringify({ messages }),
             });
 
             if (!response.ok) {

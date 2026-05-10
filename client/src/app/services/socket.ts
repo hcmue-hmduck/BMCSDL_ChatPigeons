@@ -56,4 +56,13 @@ export class SocketService {
         }
         console.log(`Đã ngắt kết nối sự kiện: ${event}`);
     }
+
+    emitLocal(event: string, data: any) {
+        const callbacks = this.eventCallbackMap.get(event);
+        if (callbacks) {
+            callbacks.forEach((wrappedCallback) => {
+                wrappedCallback(data);
+            });
+        }
+    }
 }

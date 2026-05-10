@@ -1,11 +1,15 @@
 const userblockModel = require('../models/userblockModel');
+const { Op } = require('sequelize');
 
 class UserBlockService {
     async getUserBlocks(blocker_id) {
         try {
             return await userblockModel.findAll({
                 where: {
-                    blocker_id: blocker_id,
+                    [Op.or]: [
+                        { blocker_id: blocker_id },
+                        { blocked_id: blocker_id }
+                    ]
                 }
             });
         } catch (error) {

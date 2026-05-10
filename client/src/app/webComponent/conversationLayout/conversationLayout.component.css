@@ -1024,3 +1024,363 @@ app-conversation-info-layout {
   margin-left: 2px;
   transform: rotate(45deg);
 }
+
+/* ============================================================
+   CREATE GROUP BUTTON & MODAL
+   ============================================================ */
+.btn-create-group {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border-subtle);
+  color: var(--accent);
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.btn-create-group:hover {
+  background: rgba(187, 134, 252, 0.15);
+  border-color: var(--accent);
+  box-shadow: 0 0 10px rgba(187, 134, 252, 0.3);
+  transform: translateY(-1px);
+}
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 6, 23, 0.85);
+    backdrop-filter: blur(8px);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: modalFadeIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes modalFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-card.add-member-modal {
+    background: var(--glass-strong);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    width: 480px;
+    max-width: 95vw;
+    box-shadow: var(--glass-shadow-deep);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    animation: modalScaleIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes modalScaleIn {
+    from { transform: scale(0.9) translateY(20px); opacity: 0; }
+    to { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.modal-card-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--glass-border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.modal-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+    letter-spacing: 0.02em;
+}
+
+.modal-close-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.modal-close-btn:hover {
+    background: rgba(255, 50, 80, 0.15);
+    color: #ff5050;
+    transform: rotate(90deg);
+}
+
+.modal-card-body {
+    padding: 20px 24px;
+    max-height: 450px;
+    overflow-y: auto;
+}
+
+/* Search Box */
+.search-box-wrapper {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.search-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--accent);
+    opacity: 0.6;
+    font-size: 16px;
+}
+
+.add-member-search-input {
+    width: 100%;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 12px 12px 12px 42px;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.add-member-search-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: rgba(15, 23, 42, 0.8);
+    box-shadow: 0 0 15px rgba(187, 134, 252, 0.15);
+}
+
+/* Friends List */
+.friends-selection-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.friend-select-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid transparent;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.friend-select-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: var(--glass-border);
+}
+
+.friend-select-item.selected {
+    background: var(--accent-lighter);
+    border-color: var(--accent);
+}
+
+.friend-select-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.friend-select-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--glass-border);
+}
+
+.friend-select-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+}
+
+.friend-select-email {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+/* Custom Checkbox */
+.friend-select-checkbox {
+    position: relative;
+    width: 20px;
+    height: 20px;
+}
+
+.friend-select-checkbox input {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+}
+
+.custom-checkbox {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 20px;
+    width: 20px;
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 2px solid var(--glass-border);
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.friend-select-checkbox:hover input ~ .custom-checkbox {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.friend-select-checkbox input:checked ~ .custom-checkbox {
+    background-color: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 0 10px rgba(187, 134, 252, 0.3);
+}
+
+.custom-checkbox:after {
+    content: "";
+    position: absolute;
+    display: none;
+    left: 6px;
+    top: 2px;
+    width: 5px;
+    height: 10px;
+    border: solid black;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.friend-select-checkbox input:checked ~ .custom-checkbox:after {
+    display: block;
+}
+
+/* Empty State */
+.friends-empty-state {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.friends-empty-state i {
+    font-size: 32px;
+    margin-bottom: 12px;
+    opacity: 0.3;
+}
+
+/* Footer Actions */
+.modal-card-footer {
+    padding: 20px 24px;
+    border-top: 1px solid var(--glass-border-subtle);
+    display: flex;
+    gap: 12px;
+}
+
+.modal-cancel-btn {
+    flex: 1;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    color: var(--text-secondary);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.modal-cancel-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+}
+
+.modal-submit-btn {
+    flex: 1.5;
+    padding: 12px;
+    background: var(--accent);
+    border: none;
+    border-radius: 12px;
+    color: black;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 15px rgba(187, 134, 252, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-submit-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(187, 134, 252, 0.4);
+    filter: brightness(1.1);
+}
+
+.modal-submit-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: var(--text-muted);
+    box-shadow: none;
+}
+
+.add-member-error {
+    background: rgba(255, 50, 80, 0.1);
+    border: 1px solid rgba(255, 50, 80, 0.2);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: #ff8080;
+    font-size: 13px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Loading State */
+.friends-loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    gap: 16px;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+.friends-spinner {
+    position: relative;
+    width: 40px;
+    height: 40px;
+}
+
+.spinner-ring {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(187, 134, 252, 0.1);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}

@@ -56,8 +56,7 @@ class UploadService {
             } else {
                 folderPath += `/conversations/${options.convID}/${fileType}`;
             }
-        } else if (options.feedID) {
-            folderPath += `/feeds/${options.feedID}`;
+
         }
 
         const originalName = options.originalName || path.basename(filePath);

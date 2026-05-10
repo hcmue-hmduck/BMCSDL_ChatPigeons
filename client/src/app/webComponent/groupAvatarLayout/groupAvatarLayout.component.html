@@ -1,7 +1,7 @@
 <div class="group-avatar-root" [style.--group-size]="cssSizePx">
 	<ng-container *ngIf="!isGroup || hasAvatarUrl; else generatedGroupAvatar">
 		<div class="single-avatar-wrap">
-			<img [src]="avatarUrl" [alt]="alt" class="single-avatar-img">
+			<img [src]="avatarUrl || 'assets/AvatarDefault.jpg'" [alt]="alt" class="single-avatar-img">
 		</div>
 	</ng-container>
 

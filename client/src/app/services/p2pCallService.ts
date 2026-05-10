@@ -39,8 +39,7 @@ export class P2PCallService {
             const userId = this.authService.getUserId();
             if (userId === data.inviterId) return;
 
-            console.log('Receive offer...');
-            console.log(`data.callId`, data.callId);
+            // debug logs removed
 
             this.callState.callStatus.set('ringing');
             this.callState.callId = data.callId;
@@ -59,9 +58,19 @@ export class P2PCallService {
 
         // Client 1 nhận answer từ Client 2
         this.socketService.on('directCall:answerResponse', async (data) => {
+            if (!this.callState.conversationId || this.callState.conversationId !== data.conversationId) {
+                return;
+            }
+
             this.callState.clearCallTimeout();
             this.setFriendInfo(data.answererId, data.answererName, data.answererAvatarUrl);
             await this.handleAnswer(data);
+
+            // Answer received means callee accepted; move caller out of ringing UI immediately.
+            if (this.callState.callStatus() === 'ringing') {
+                this.callState.callStatus.set('connected');
+                this.callState.syncCallStateToParent();
+            }
         });
 
         // Nhận ICE candidate từ client kia
@@ -194,21 +203,15 @@ export class P2PCallService {
                 iceServers,
             });
 
-            // Debug ICE/DTLS states to track connectivity issues
             this.peerConnection.addEventListener('iceconnectionstatechange', () => {
-                console.log('ICE connection state:', this.peerConnection?.iceConnectionState);
+                // connection state changes handled without verbose logging
                 window.setTimeout(() => {
                     this.logUsedIceServer();
                 }, 1000);
             });
 
-            this.peerConnection.addEventListener('icegatheringstatechange', () => {
-                console.log('ICE gathering state:', this.peerConnection?.iceGatheringState);
-            });
-
             this.peerConnection.addEventListener('connectionstatechange', () => {
                 const state = this.peerConnection?.connectionState;
-                console.log('Peer connection state:', state);
 
                 if (state === 'connected') {
                     this.callState.callStatus.set('connected');
@@ -220,7 +223,7 @@ export class P2PCallService {
             });
 
             this.peerConnection.addEventListener('icecandidateerror', (event) => {
-                console.log('ICE candidate error:', event);
+                console.error('ICE candidate error:', event);
             });
 
             // Khi nhận được icecandidate mới từ STUN server
@@ -292,7 +295,14 @@ export class P2PCallService {
                     this.callState.remoteParticipants.set([...currentParticipants]);
                 }
 
-                console.log('Track received...');
+                // remote track processed
+
+                // Fallback: if signaling connected event is delayed, receiving remote media means call is active.
+                if (this.callState.callStatus() === 'ringing') {
+                    this.callState.clearCallTimeout();
+                    this.callState.callStatus.set('connected');
+                    this.callState.syncCallStateToParent();
+                }
             });
 
             if (isOfferer) {
@@ -386,14 +396,14 @@ export class P2PCallService {
             this.sendLocalIceCandidates();
 
             const { full_name, avatar_url, id } = this.authService.getUserInfor();
-            this.socketService.emit('directCall:newAnswer', {
+                    this.socketService.emit('directCall:newAnswer', {
                 answer,
                 conversationId: this.callState.conversationId,
                 answererId: id,
                 answererName: full_name,
                 answererAvatarUrl: avatar_url,
             });
-            console.log('P2P answer sent');
+            // answer sent
         } catch (error) {
             console.error(error);
             this.callState.callStatus.set('failed');
@@ -468,24 +478,7 @@ export class P2PCallService {
                     const remoteCandidate = stats.get(report.remoteCandidateId);
 
                     if (localCandidate && remoteCandidate) {
-                        console.log(
-                            '%c --- CONNECTION INFO ---',
-                            'color: yellow; font-weight: bold;',
-                        );
-                        console.log(`Connection type: ${localCandidate.candidateType}`);
-                        console.log(`Protocol: ${localCandidate.protocol}`);
-
-                        if (localCandidate.candidateType === 'relay') {
-                            console.log(
-                                `%c USING TURN SERVER: ${localCandidate.url}`,
-                                'color: #ff9900; font-weight: bold;',
-                            );
-                            console.log(
-                                `Relay address: ${localCandidate.address}:${localCandidate.port}`,
-                            );
-                        } else {
-                            console.log('%c USING P2P (NO TURN QUOTA)', 'color: #00ff00;');
-                        }
+                        // connection info available (debug logs removed)
                     }
                 }
             }

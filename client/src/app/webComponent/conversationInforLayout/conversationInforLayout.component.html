@@ -10,41 +10,46 @@
     <div class="sidebar-content-scroll">
         <!-- Profile Section -->
         <div class="profile-section">
-            <div class="avatar-container">
+            <div class="avatar-container" style="position: relative; width: 112px; height: 112px; margin: 0 auto;">
                 <app-group-avatar-layout [members]="participants" [isGroup]="isGroupConversation"
                     [avatarUrl]="isGroupConversation ? (conversationAvatar || conversationInfor?.avatar_url || 'assets/AvatarDefault.jpg') : profileAvatar"
                     [alt]="profileName" [size]="112">
                 </app-group-avatar-layout>
+                @if (isGroupConversation && isCurrentUserActiveMember && (isOwner || isAdmin)) {
+                <button class="upload-avatar-btn" (click)="triggerAvatarUpload()" title="Đổi ảnh đại diện" style="position: absolute; bottom: 0; right: 0; border: none; background: rgba(0,0,0,0.6); color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                    <i class="bi bi-camera"></i>
+                </button>
+                <input type="file" #avatarInput style="display: none;" (change)="onAvatarSelected($event)" accept="image/*">
+                }
             </div>
-            @if (!isGroupConversation && otherParticipant?.is_bot) {
-            <h1 class="profile-name"><i class="bi bi-robot me-1"></i>{{ profileName }}</h1>
-            } @else {
-            <h1 class="profile-name">{{ profileName }}</h1>
-            }
+            <h1 class="profile-name" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                {{ profileName }}
+                @if (isGroupConversation && isCurrentUserActiveMember && (isOwner || isAdmin)) {
+                <button class="action-btn edit-btn" (click)="editGroupName()" title="Sửa tên nhóm" style="font-size: 1rem; border: none; background: none; cursor: pointer; padding: 0; display: inline-flex; align-items: center;">
+                    <i class="bi bi-pencil" style="color: var(--accent-color, #ff0055);"></i>
+                </button>
+                }
+            </h1>
 
             <div class="action-buttons">
                 @if (!isGroupConversation) {
-                    <div class="action-item group">
-                        <div class="icon-circle">
-                            <i class="bi bi-person-fill"></i>
-                        </div>
-                        <span class="action-label">Trang cá nhân</span>
+                <div class="action-item group" (click)="openUserProfile()">
+                    <div class="icon-circle">
+                        <i class="bi bi-person-fill"></i>
                     </div>
+                    <span class="action-label">Trang cá nhân</span>
+                </div>
                 }
                 @else {
-                    <div class="action-item group">
-                        <div class="icon-circle" (click)="handleAddMember()">
-                            <i class="bi bi-person-plus-fill"></i>
-                        </div>
-                        <span class="action-label">Thêm thành viên</span>
-                    </div>
-                }
+                @if (isCurrentUserActiveMember) {
                 <div class="action-item group">
-                    <div class="icon-circle">
-                        <i class="bi bi-bell-fill"></i>
+                    <div class="icon-circle" (click)="handleAddMember()">
+                        <i class="bi bi-person-plus-fill"></i>
                     </div>
-                    <span class="action-label">Tắt thông báo</span>
+                    <span class="action-label">Thêm thành viên</span>
                 </div>
+                }
+                }
                 <div class="action-item group">
                     <div class="icon-circle">
                         <i class="bi bi-search"></i>
@@ -56,33 +61,7 @@
 
         <!-- Accordion Sections -->
         <div class="accordion-list">
-            <!-- Tùy chỉnh -->
-            <div class="accordion-item">
-                <button class="accordion-header" (click)="toggleSection('customization')">
-                    <span>Tùy chỉnh</span>
-                    <i class="bi" [class.bi-chevron-up]="sections().customization"
-                        [class.bi-chevron-down]="!sections().customization"></i>
-                </button>
-                <div class="accordion-content" [class.open]="sections().customization">
-                    <div class="content-padding">
-                        <div class="list-item">
-                            <span>Thay đổi chủ đề</span>
-                            <div class="theme-dot"></div>
-                        </div>
-                        <div class="list-item">
-                            <span>Chỉnh sửa biểu tượng</span>
-                            <span class="emoji">⚡</span>
-                        </div>
-                        <div class="list-item">
-                            <span>Chỉnh sửa biệt danh</span>
-                            <span class="muted-text">Pigeons</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <!-- Thành viên -->
-            @if (isGroupConversation) {
             <div class="accordion-item">
                 <button class="accordion-header" (click)="toggleSection('members')">
                     <span>Thành viên</span>
@@ -93,14 +72,62 @@
                     <div class="content-padding">
                         @for (member of participants; track member.user_id) {
                         <div class="member-item">
-                            <img [src]="member.avatar_url" [alt]="member.full_name" class="member-avatar">
+                            <img [src]="member.avatar_url || 'assets/AvatarDefault.jpg'" [alt]="member.full_name" class="member-avatar">
                             <div class="member-info">
-                                <p class="member-name">{{ member.full_name }}</p>
-                                <p class="member-role accent-text">{{ member.role === 'admin' ? 'Quản trị viên' : 'Thành viên' }}</p>
+                                <p class="member-name">{{ member.nick_name || member.full_name }}</p>
+                                <p class="member-role accent-text">
+                                    {{ member.owner === 'owner' ? 'Trưởng nhóm' : (member.owner === 'admin' ? 'Phó nhóm'
+                                    : 'Thành viên') }}
+                                </p>
                             </div>
+                            @if (isCurrentUserActiveMember) {
+                            <div class="member-actions">
+                                <button class="action-btn edit-btn" (click)="editNickname(member)"
+                                    title="Sửa biệt danh">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                @if (isGroupConversation) {
+                                <!-- Quyền của Trưởng nhóm (Owner) -->
+                                @if (isOwner) {
+                                <!-- Nếu là Phó nhóm -> Có thể đì xuống hoặc chuyển Owner -->
+                                @if (member.owner === 'admin') {
+                                <button class="action-btn demote-btn" (click)="demoteToMember(member)"
+                                    title="Bãi nhiệm Phó nhóm">
+                                    <i class="bi bi-arrow-down"></i>
+                                </button>
+                                <button class="action-btn transfer-btn" (click)="transferOwnership(member)"
+                                    title="Chuyển Trưởng nhóm">
+                                    <i class="bi bi-award"></i>
+                                </button>
+                                }
+                                <!-- Nếu là Thành viên -> Có thể thăng lên hoặc chuyển Owner -->
+                                @if (member.owner !== 'owner' && member.owner !== 'admin') {
+                                <button class="action-btn promote-btn" (click)="promoteToAdmin(member)"
+                                    title="Phong làm Phó nhóm">
+                                    <i class="bi bi-arrow-up"></i>
+                                </button>
+                                <button class="action-btn transfer-btn" (click)="transferOwnership(member)"
+                                    title="Chuyển Trưởng nhóm">
+                                    <i class="bi bi-award"></i>
+                                </button>
+                                }
+                                }
+
+                                <!-- Quyền xoá thành viên (Trưởng nhóm xoá ai cũng được, Phó nhóm chỉ xoá được Thành viên) -->
+                                @if (member.user_id !== currentUserId) {
+                                @if (isOwner || (isAdmin && member.owner !== 'owner' && member.owner !== 'admin')) {
+                                <button class="action-btn delete-btn" (click)="removeMember(member)"
+                                    title="Xoá khỏi nhóm">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                                }
+                                }
+                                }
+                            </div>
+                            }
                         </div>
                         }
-                        @if (isGroupConversation) {
+                        @if (isGroupConversation && isCurrentUserActiveMember) {
                         <button class="add-people-btn" (click)="handleAddMember()">
                             <i class="bi bi-person-plus"></i>
                             Thêm thành viên
@@ -109,7 +136,6 @@
                     </div>
                 </div>
             </div>
-            }
 
             <!-- Image Section -->
             <div class="accordion-item">
@@ -123,7 +149,8 @@
                         @if (imgData().length > 0) {
                         <div class="media-section">
                             <div class="media-grid">
-                                @for (item of (mediaShowAll().image ? imgData() : imgData().slice(0, 3)); track item.id; let i = $index) {
+                                @for (item of (mediaShowAll().image ? imgData() : imgData().slice(0, 3)); track item.id;
+                                let i = $index) {
                                 <div class="media-item" (click)="openGallery(i)">
                                     <img [src]="item.file_url" [alt]="item.file_name">
                                 </div>
@@ -156,7 +183,8 @@
                         @if (vidData().length > 0) {
                         <div class="media-section">
                             <div class="media-grid">
-                                @for (item of (mediaShowAll().video ? vidData() : vidData().slice(0, 3)); track item.id; let i = $index) {
+                                @for (item of (mediaShowAll().video ? vidData() : vidData().slice(0, 3)); track item.id;
+                                let i = $index) {
                                 <div class="media-item video" (click)="openVideoGallery(i)">
                                     @if (item.thumbnail_url) {
                                     <img [src]="item.thumbnail_url" [alt]="item.file_name">
@@ -263,56 +291,36 @@
             </div>
 
             <!-- Quyền riêng tư & Hỗ trợ -->
-            <div class="accordion-item">
-                <button class="accordion-header" (click)="toggleSection('privacy')">
-                    <span>Quyền riêng tư & Hỗ trợ</span>
-                    <i class="bi" [class.bi-chevron-up]="sections().privacy"
-                        [class.bi-chevron-down]="!sections().privacy"></i>
-                </button>
-                <div class="accordion-content" [class.open]="sections().privacy">
-                    <div class="content-padding">
-                        <button class="action-row group">
-                            <i class="bi bi-slash-circle"></i>
-                            <div class="action-body">
-                                <p class="action-title">Tắt thông báo</p>
-                                <p class="action-status">Mặc định</p>
-                            </div>
+            @if (isGroupConversation) {
+                <div class="accordion-item">
+                    @if (isOwner) {
+                        <button class="accordion-header" style="color: var(--danger-color, #ff0055); display: flex; justify-content: space-between; align-items: center;" (click)="disbandGroup()">
+                            <span>Giải tán nhóm</span>
+                            <i class="bi bi-trash"></i>
                         </button>
-                        <button class="action-row group">
-                            <i class="bi bi-eye"></i>
-                            <div class="action-body">
-                                <p class="action-title">Thông báo đã đọc</p>
-                                <p class="action-status">Đang bật</p>
-                            </div>
-                        </button>
-                        <button class="action-row group">
-                            <i class="bi bi-clock-history"></i>
-                            <div class="action-body">
-                                <p class="action-title">Tin nhắn tự xóa</p>
-                                <p class="action-status">Tắt</p>
-                            </div>
-                        </button>
-
-                        <div class="separator"></div>
-
-                        <button class="action-row danger group">
-                            <i class="bi bi-exclamation-triangle"></i>
-                            <div class="action-body">
-                                <p class="action-title">Báo cáo</p>
-                                <p class="action-status">Báo cáo vi phạm nội dung</p>
-                            </div>
-                        </button>
-                        <button class="action-row danger group">
-                            <i class="bi bi-shield-slash"></i>
-                            <span>Chặn liên hệ</span>
-                        </button>
-                        <button class="action-row danger group">
+                    } @else if (isCurrentUserActiveMember) {
+                        <button class="accordion-header" style="color: var(--danger-color, #ff0055); display: flex; justify-content: space-between; align-items: center;" (click)="leaveGroup()">
+                            <span>Rời nhóm</span>
                             <i class="bi bi-box-arrow-right"></i>
-                            <span>Rời khỏi cuộc trò chuyện</span>
                         </button>
-                    </div>
+                    }
                 </div>
-            </div>
+            }
+            @if (!isGroupConversation) {
+                <div class="accordion-item">
+                    @if (isBlocked) {
+                        <button class="accordion-header" style="color: var(--danger-color, #ff0055); display: flex; justify-content: space-between; align-items: center;" (click)="unblockUser()">
+                            <span>Bỏ chặn</span>
+                            <i class="bi bi-shield-check"></i>
+                        </button>
+                    } @else {
+                        <button class="accordion-header" style="color: var(--danger-color, #ff0055); display: flex; justify-content: space-between; align-items: center;" (click)="blockUser()">
+                            <span>Chặn</span>
+                            <i class="bi bi-shield-slash"></i>
+                        </button>
+                    }
+                </div>
+            }
         </div>
 
     </div>
@@ -474,3 +482,6 @@
     </div>
 </div>
 }
+
+<user-infor-modal #userProfileModal [currentUserId]="otherParticipant?.user_id" [editPremission]="false">
+</user-infor-modal>

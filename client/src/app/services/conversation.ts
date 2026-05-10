@@ -27,6 +27,10 @@ export class Conversation {
         return this.http.post(`${this.apiUrl}`, { participants_id, conversation_type, name, avatar_url, created_by, last_message_id, last_message_at });
     }
 
+    createGroup(participants_ids: string[], name: string, avatar_url?: string): Observable<any> {
+        return this.http.post(`${this.apiUrl}/group`, { participants_ids, name, avatar_url });
+    }
+
     postConversation(targetUserId: string, currentUserId: string): Observable<any> {
         return this.http.post(`${this.apiUrl}`, { 
             participants_id: targetUserId,
@@ -41,5 +45,9 @@ export class Conversation {
 
     deleteConversation(conversationId: string): Observable<any> {
         return this.http.delete(`${this.apiUrl}/${conversationId}`);
+    }
+
+    updateParticipant(participantId: string, data: any): Observable<any> {
+        return this.http.put(`${environment.apiUrl}/home/participants/${participantId}`, data);
     }
 }

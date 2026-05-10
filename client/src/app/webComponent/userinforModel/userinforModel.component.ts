@@ -21,6 +21,7 @@ import { UploadService } from '../../services/uploadService';
 import { error } from 'node:console';
 import Swal from 'sweetalert2';
 import { matchFieldsValidator } from '../../utils/validators';
+import { E2eeModalService } from '../../services/e2ee/e2eeModalService';
 
 @Component({
     selector: 'user-infor-modal',
@@ -33,6 +34,7 @@ import { matchFieldsValidator } from '../../utils/validators';
 export class UserInforModel {
     cdr = inject(ChangeDetectorRef);
     authService = inject(AuthService);
+    e2eeModalService = inject(E2eeModalService);
 
     userInfo = signal<any>(null);
     @Input() currentUserId = '';
@@ -95,7 +97,26 @@ export class UserInforModel {
 
         if (initialData) {
             this.userInfo.set(initialData);
-            this.loadingUser.set(false);
+            
+            const userId = initialData.id || initialData.user_id;
+            if (userId) {
+                this.loadingUser.set(true);
+                this.userService.getUserById(userId).subscribe({
+                    next: (res: any) => {
+                        // Merge data cũ và mới để giữ lại avatar/name nếu API thiếu
+                        this.userInfo.set({ ...initialData, ...res.metadata.userInfor });
+                        this.loadingUser.set(false);
+                        this.cdr.markForCheck();
+                    },
+                    error: (err) => {
+                        console.error('Error fetching user profile:', err);
+                        this.loadingUser.set(false);
+                        this.cdr.markForCheck();
+                    }
+                });
+            } else {
+                this.loadingUser.set(false);
+            }
         }
         this.cdr.markForCheck();
     }
@@ -242,6 +263,11 @@ export class UserInforModel {
 
     changeAvatar() {
         this.fileInput.nativeElement.click();
+    }
+
+    changeE2eePin() {
+        this.e2eeModalService.open('change');
+        this.closeProfileModal();
     }
 
     onAvatarFileSelected(event: Event) {

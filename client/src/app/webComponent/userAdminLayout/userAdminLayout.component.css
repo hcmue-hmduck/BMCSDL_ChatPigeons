@@ -1,0 +1,147 @@
+:host {
+  --admin-primary: var(--accent);
+  --admin-border: rgba(187, 134, 252, 0.1);
+  --text-slate-100: #f1f5f9;
+  --text-slate-300: #cbd5e1;
+  --text-slate-400: #94a3b8;
+  --text-slate-500: #64748b;
+}
+
+.user-admin-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.user-admin-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-slate-100);
+    margin: 0;
+    text-shadow: 0 0 8px rgba(187, 134, 252, 0.4);
+}
+
+.user-count {
+    font-size: 0.875rem;
+    color: var(--text-slate-500);
+    margin: -16px 0 0 0;
+}
+
+/* Table Card */
+.table-panel {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--admin-border);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.user-admin-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.user-admin-table th {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 16px 24px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-slate-500);
+    text-align: left;
+}
+
+.user-admin-table td {
+    padding: 16px 24px;
+    font-size: 0.875rem;
+    color: var(--text-slate-300);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.user-admin-table tr:last-child td {
+    border-bottom: none;
+}
+
+.user-admin-table tr:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid rgba(187, 134, 252, 0.3);
+    padding: 2px;
+    background: #0d1117;
+    object-fit: cover;
+    box-shadow: 0 0 10px rgba(187, 134, 252, 0.1);
+}
+
+/* Status Badges */
+.status-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: capitalize;
+}
+
+.status-pill::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+
+.user-status-online {
+    color: #10b981;
+}
+.user-status-online::before {
+    background: #10b981;
+    box-shadow: 0 0 8px #10b981;
+}
+
+.user-status-offline {
+    color: var(--text-slate-500);
+}
+.user-status-offline::before {
+    background: var(--text-slate-500);
+}
+
+.user-role {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--admin-primary);
+    background: rgba(187, 134, 252, 0.05);
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(187, 134, 252, 0.1);
+}
+
+/* States */
+.user-loading, .user-error, .user-empty {
+    padding: 40px;
+    text-align: center;
+    color: var(--text-slate-500);
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+    border: 1px solid var(--admin-border);
+}
+
+.user-error {
+    color: #ff4757;
+    border-color: rgba(255, 71, 87, 0.2);
+}
+
+.user-loading i {
+    font-size: 2rem;
+    margin-bottom: 12px;
+    color: var(--admin-primary);
+    animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}

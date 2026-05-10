@@ -36,6 +36,7 @@ export class RelationshipStoreService {
     friendIds = new Set<string>();
     friendRequestsIds = new Set<string>();
     sendingRequestsIds = new Set<string>();
+    allFriendIds = new Set<string>();
 
     constructor() {
         this.setupSocketListeners();
@@ -68,10 +69,13 @@ export class RelationshipStoreService {
                 const allUsersArr = res.users?.metadata || [];
 
                 // Reset Helper Sets
+                this.allFriendIds = new Set<string>(allFriendsArr.map((f: any) => f.friend_id));
+                const blockedIdsSet = new Set<string>(blocksArr.map((b: any) => b.blocked_id));
+                
+                // Bao gồm tất cả bạn bè kể cả đã chặn
                 this.friendIds = new Set<string>(allFriendsArr.map((f: any) => f.friend_id));
                 this.friendRequestsIds = new Set<string>(receivedRequestsArr.map((r: any) => r.sender_id));
                 this.sendingRequestsIds = new Set<string>(sentRequestsArr.map((r: any) => r.receiver_id));
-                const blockedIdsSet = new Set<string>(blocksArr.map((b: any) => b.blocked_id));
 
                 const userProfileMap = new Map<string, any>(allUsersArr.map((u: any) => [u.id, u]));
 
@@ -84,13 +88,13 @@ export class RelationshipStoreService {
 
                     if (blockedIdsSet.has(u.id)) {
                         const blockData = blocksArr.find((b: any) => b.blocked_id === u.id);
-                        blockedList.push({ ...u, block_id: blockData?.id, reason: blockData?.reason });
+                        blockedList.push({ ...u, friend_id: u.id, block_id: blockData?.id, reason: blockData?.reason });
                     } else {
                         const isFriend = this.friendIds.has(u.id);
                         const isRequestSent = this.sendingRequestsIds.has(u.id);
                         const isRequestReceived = this.friendRequestsIds.has(u.id);
                         if (!isFriend && !isRequestSent && !isRequestReceived) {
-                            suggestionsList.push(u);
+                            suggestionsList.push({ ...u, friend_id: u.id });
                         }
                     }
                 });
@@ -158,14 +162,88 @@ export class RelationshipStoreService {
 
     private setupSocketListeners() {
         this.socketService.on('updateFriend', (data: any) => {
-            const removerId = data.remover_id;
-            this.friends.update(list => list.filter(f => (f.friend_id || f.id) !== removerId));
+            if (!data) return;
+            const currentUserId = this.convStore.currentUserInfo()?.id;
+            
+            // Nếu mình là người xóa, thì id cần xóa là target_id. Ngược lại là remover_id.
+            const idToRemove = (String(data.remover_id) === String(currentUserId)) ? data.target_id : data.remover_id;
+            
+            const friendToRemove = this.friends().find(f => String(f.friend_id || f.id) === String(idToRemove));
+            
+            this.friends.update(list => list.filter(f => String(f.friend_id || f.id) !== String(idToRemove)));
+            this.friendIds.delete(idToRemove);
+            
+            // Trả về danh sách gợi ý
+            if (friendToRemove) {
+                const suggestion = {
+                    id: idToRemove,
+                    friend_id: idToRemove,
+                    full_name: friendToRemove.full_name,
+                    avatar_url: friendToRemove.avatar_url,
+                    status: friendToRemove.status,
+                    is_bot: friendToRemove.is_bot
+                };
+                this.suggestions.update(list => {
+                    if (!list.some(u => String(u.id) === String(idToRemove))) {
+                        return [...list, suggestion];
+                    }
+                    return list;
+                });
+            }
         });
 
         this.socketService.on('sendFriendRequest', (data: any) => {
-            if (data.receiver_id === this.convStore.currentUserInfo()?.id) {
-                this.friendRequests.update(prev => [...prev, data]);
+            if (!data) return;
+            const currentUserId = this.convStore.currentUserInfo()?.id;
+            
+            if (String(data.receiver_id) === String(currentUserId)) {
+                this.friendRequests.update(prev => {
+                    if (!prev.some(r => String(r.id) === String(data.id))) {
+                        return [...prev, data];
+                    }
+                    return prev;
+                });
                 this.friendRequestsIds.add(data.sender_id);
+                // Xóa khỏi danh sách gợi ý của người nhận
+                this.suggestions.update(list => list.filter(u => String(u.id) !== String(data.sender_id)));
+            } else if (String(data.sender_id) === String(currentUserId)) {
+                // Đồng bộ cho các tab khác của người gửi
+                this.sentRequests.update(prev => {
+                    if (!prev.some(r => String(r.id) === String(data.id))) {
+                        return [...prev, data];
+                    }
+                    return prev;
+                });
+                this.sendingRequestsIds.add(data.receiver_id);
+                // Xóa khỏi danh sách gợi ý của người gửi ở tab khác
+                this.suggestions.update(list => list.filter(u => String(u.id) !== String(data.receiver_id)));
+            }
+        });
+
+        this.socketService.on('rejectFriendRequest', (data: any) => {
+            if (!data) return;
+            const currentUserId = this.convStore.currentUserInfo()?.id;
+            
+            // Nếu mình là người gửi lời mời (và bị từ chối)
+            if (String(data.sender_id) === String(currentUserId)) {
+                // Xóa khỏi danh sách đã gửi
+                this.sentRequests.update(list => list.filter(r => r.id !== data.id));
+                this.sendingRequestsIds.delete(data.receiver_id);
+                
+                // Trả về danh sách gợi ý
+                const suggestion = {
+                    id: data.receiver_id,
+                    friend_id: data.receiver_id,
+                    full_name: data.receiver_name,
+                    avatar_url: data.receiver_avatar,
+                    status: 'online'
+                };
+                this.suggestions.update(list => {
+                    if (!list.some(u => String(u.id) === String(data.receiver_id))) {
+                        return [...list, suggestion];
+                    }
+                    return list;
+                });
             }
         });
 
@@ -175,33 +253,78 @@ export class RelationshipStoreService {
         });
 
         this.socketService.on('acceptFriendRequest', (data: any) => {
+            if (!data) return;
             const currentUserId = this.convStore.currentUserInfo()?.id;
-            if (data.friend && (data.friend.user_id === currentUserId || data.friend.friend_id === currentUserId)) {
-                this.friends.update(prev => [...prev, data.friend]);
-                const newFid = data.friend.user_id === currentUserId ? data.friend.friend_id : data.friend.user_id;
-                this.friendIds.add(newFid);
+            
+            // Nếu mình là người gửi lời mời (và đối phương vừa chấp nhận)
+            if (String(data.sender_id) === String(currentUserId)) {
+                const newFriend = {
+                    friend_id: data.receiver_id,
+                    full_name: data.receiver_name,
+                    avatar_url: data.receiver_avatar,
+                    status: 'online'
+                };
+                
+                this.friends.update(prev => {
+                    if (!prev.some(f => String(f.friend_id) === String(data.receiver_id))) {
+                        return [...prev, newFriend];
+                    }
+                    return prev;
+                });
+                this.friendIds.add(data.receiver_id);
+                
+                // Xóa khỏi danh sách đã gửi
+                this.sentRequests.update(list => list.filter(r => r.id !== data.request_id));
+                this.sendingRequestsIds.delete(data.receiver_id);
             }
         });
 
         this.socketService.on('blockUser', (data: any) => {
+             if (!data) return;
              const blockedId = data.blocked_id;
-             this.friends.update(list => list.filter(f => (f.friend_id || f.id) !== blockedId));
-             this.friendIds.delete(blockedId);
+             // Không xóa khỏi friends nữa
+             // Thêm vào blockedUser nếu chưa có (để đồng bộ nhiều tab)
+             this.blockedUser.update(list => {
+                 if (!list.some(b => String(b.friend_id || b.id) === String(blockedId))) {
+                     return [...list, { friend_id: blockedId, block_id: data.id, reason: data.reason }];
+                 }
+                 return list;
+             });
         });
 
         this.socketService.on('unblockUser', (data: any) => {
-            this.blockedUser.update(list => list.filter(b => (b.blocked_id || b.id) !== data.blocked_id));
+            if (!data) return;
+            this.blockedUser.update(list => list.filter(b => String(b.friend_id || b.id) !== String(data.blocked_id)));
         });
     }
 
     // --- Actions ---
     sendFriendRequest(currentUserId: string, targetUserId: string) {
+        // Lấy thông tin profile từ suggestions trước khi xóa
+        const targetUserProfile = this.suggestions().find(u => String(u.id) === String(targetUserId));
+
         return this.friendRequestService.createFriendRequest(currentUserId, targetUserId, '').subscribe({
             next: (res: any) => {
-                const request = res.metadata.newFriendRequest;
-                this.sentRequests.update(list => [...list, request]);
-                this.sendingRequestsIds.add(targetUserId);
-                this.socketService.emit('sendFriendRequest', request);
+                const request = res.metadata;
+                
+                if (request) {
+                    // Làm giàu dữ liệu với tên và avatar
+                    const enrichedRequest = {
+                        ...request,
+                        receiver_name: targetUserProfile?.full_name,
+                        receiver_avatar: targetUserProfile?.avatar_url,
+                        sender_name: this.convStore.currentUserInfo()?.full_name,
+                        sender_avatar: this.convStore.currentUserInfo()?.avatar_url
+                    };
+
+                    this.sentRequests.update(list => [...list, enrichedRequest]);
+                    this.sendingRequestsIds.add(targetUserId);
+                    
+                    // Xóa khỏi danh sách gợi ý của người gửi ngay lập tức
+                    this.suggestions.update(list => list.filter(u => String(u.id) !== String(targetUserId)));
+                    
+                    this.socketService.emit('sendFriendRequest', enrichedRequest);
+                }
             }
         });
     }
@@ -227,7 +350,14 @@ export class RelationshipStoreService {
                 this.friendIds.add(sender_id);
                 this.friendRequests.update(list => list.filter(r => r.id !== requestId));
 
-                this.socketService.emit('acceptFriendRequest', { friend: fullFriendData });
+                // Gửi đầy đủ thông tin để cả 2 bên cập nhật được
+                this.socketService.emit('acceptFriendRequest', { 
+                    request_id: requestId,
+                    sender_id: sender_id,
+                    receiver_id: currentUserId,
+                    receiver_name: this.convStore.currentUserInfo()?.full_name,
+                    receiver_avatar: this.convStore.currentUserInfo()?.avatar_url
+                });
             }
         });
     }
@@ -248,7 +378,28 @@ export class RelationshipStoreService {
             next: () => {
                 this.friendRequests.update(list => list.filter(r => r.id !== requestId));
                 this.friendRequestsIds.delete(request.sender_id);
-                this.socketService.emit('rejectFriendRequest', request);
+                
+                // Trả về danh sách gợi ý cho người từ chối (người nhận)
+                const suggestion = {
+                    id: request.sender_id,
+                    friend_id: request.sender_id,
+                    full_name: request.sender_name,
+                    avatar_url: request.sender_avatar,
+                    status: request.status || 'online'
+                };
+                this.suggestions.update(list => {
+                    if (!list.some(u => String(u.id) === String(request.sender_id))) {
+                        return [...list, suggestion];
+                    }
+                    return list;
+                });
+
+                // Đính kèm thông tin của mình (người từ chối) để người gửi cập nhật gợi ý
+                this.socketService.emit('rejectFriendRequest', {
+                    ...request,
+                    receiver_name: this.convStore.currentUserInfo()?.full_name,
+                    receiver_avatar: this.convStore.currentUserInfo()?.avatar_url
+                });
             }
         });
     }
@@ -256,8 +407,29 @@ export class RelationshipStoreService {
     deleteFriend(currentUserId: string, friendId: string) {
         return this.friendService.deleteFriend(currentUserId, friendId).subscribe({
             next: () => {
-                this.friends.update(list => list.filter(f => (f.friend_id || f.id) !== friendId));
+                const friendToRemove = this.friends().find(f => String(f.friend_id || f.id) === String(friendId));
+                
+                this.friends.update(list => list.filter(f => String(f.friend_id || f.id) !== String(friendId)));
                 this.friendIds.delete(friendId);
+                
+                // Trả về danh sách gợi ý
+                if (friendToRemove) {
+                    const suggestion = {
+                        id: friendId,
+                        friend_id: friendId,
+                        full_name: friendToRemove.full_name,
+                        avatar_url: friendToRemove.avatar_url,
+                        status: friendToRemove.status,
+                        is_bot: friendToRemove.is_bot
+                    };
+                    this.suggestions.update(list => {
+                        if (!list.some(u => String(u.id) === String(friendId))) {
+                            return [...list, suggestion];
+                        }
+                        return list;
+                    });
+                }
+
                 this.socketService.emit('updateFriend', {
                     remover_id: currentUserId,
                     target_id: friendId
@@ -270,11 +442,9 @@ export class RelationshipStoreService {
         const friendId = friend.friend_id || friend.id;
         return this.userBlockService.createBlockedUser(currentUserId, friendId, reason).subscribe({
             next: (res: any) => {
-                const blockedUser = { ...friend, block_id: res.metadata.newUserBlock.id, reason };
-                this.friends.update(list => list.filter(f => (f.friend_id || f.id) !== friendId));
+                const blockedUser = { ...friend, friend_id: friendId, block_id: res.metadata.newUserBlock.id, reason };
                 this.blockedUser.update(list => [...list, blockedUser]);
-                this.friendIds.delete(friendId);
-                this.socketService.emit('blockUser', { blocker_id: currentUserId, blocked_id: friendId });
+                this.socketService.emit('blockUser', { blocker_id: currentUserId, blocked_id: friendId, id: res.metadata.newUserBlock.id });
             }
         });
     }

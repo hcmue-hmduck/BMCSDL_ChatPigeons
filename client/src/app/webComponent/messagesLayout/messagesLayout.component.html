@@ -1,25 +1,43 @@
 <!-- ============================================================
         HEADER
         ============================================================ -->
+@if (showWarningE2EE()) {
+    <div class="e2ee-unlock-overlay">
+        <div class="e2ee-unlock-card">
+            <div class="unlock-icon-wrapper">
+                <i class="bi bi-shield-lock-fill unlock-icon"></i>
+            </div>
+            <h2>Yêu cầu khôi phục bảo mật</h2>
+            <p>Vui lòng nhập mã PIN để khôi phục các khóa bảo mật và tiếp tục cuộc trò chuyện của bạn.</p>
+            <button class="unlock-btn" (click)="e2eeModalService.open('recovery')">
+                Nhập mã PIN ngay
+            </button>
+        </div>
+    </div>
+}
+@else {
 <div class="chat-header">
     <div class="chat-header-left">
-
         <!-- Avatar section -->
         @if (getMessageInfor().participants) {
         <div class="header-avatar-wrap">
             @if (getMessageInfor().type === 'group') {
-            <app-group-avatar-layout [members]="getMessageInfor().participants || []" [isGroup]="true"
-                [avatarUrl]="getMessageInfor().avatar_url && getMessageInfor().avatar_url.trim() ? getMessageInfor().avatar_url : null"
-                [alt]="getMessageInfor().title" [size]="42">
+            <app-group-avatar-layout [members]="getMessageInfor().participants || []" [isGroup]="true" [avatarUrl]="
+                                    getMessageInfor().avatar_url && getMessageInfor().avatar_url.trim()
+                                        ? getMessageInfor().avatar_url
+                                        : null
+                                " [alt]="getMessageInfor().title" [size]="42">
             </app-group-avatar-layout>
             } @else {
             @if (getMessageInfor().other_participant) {
             <div>
-                <img [src]="getMessageInfor().other_participant.avatar_url"
-                    [alt]="getMessageInfor().other_participant.full_name" class="header-avatar">
-                <span class="header-status-dot"
-                    [class.online]="isUserOnline(getMessageInfor().other_participant.user_id)"
-                    [class.offline]="!isUserOnline(getMessageInfor().other_participant.user_id)">
+                <img [src]="getMessageInfor().other_participant.avatar_url || 'assets/AvatarDefault.jpg'"
+                    [alt]="getMessageInfor().other_participant.full_name" class="header-avatar" />
+                <span class="header-status-dot" [class.online]="
+                                            isUserOnline(getMessageInfor().other_participant.user_id)
+                                        " [class.offline]="
+                                            !isUserOnline(getMessageInfor().other_participant.user_id)
+                                        ">
                 </span>
             </div>
             }
@@ -29,20 +47,34 @@
 
         <!-- Title & sub -->
         <div class="chat-header-info">
-            <p class="chat-header-title">{{ getMessageInfor().title || 'Conversation' }}</p>
+            <p class="chat-header-title">
+                @if (isMuted(getMessageInfor())) {
+                    <i class="bi bi-bell-slash me-1" style="font-size: 0.9rem;"></i>
+                }
+                {{ getMessageInfor().title || 'Conversation' }}
+            </p>
             @if (getMessageInfor().type === 'group') {
             <p class="chat-header-sub">
                 {{ getMessageInfor().participants?.length || 0 }} thành viên
             </p>
             }
             @if (getMessageInfor().type === 'direct' && getMessageInfor().other_participant) {
-            <p class="chat-header-sub"
-                [class.online]="isUserOnline(getMessageInfor().other_participant.user_id)">
-                @if (isUserOnline(getMessageInfor().other_participant.user_id)) {
+            <p class="chat-header-sub" [class.online]="
+                                isUserOnline(getMessageInfor().other_participant.user_id)
+                            ">
+                @if (
+                isUserOnline(getMessageInfor().other_participant.user_id)
+                ) {
                 Đang hoạt động
                 } @else {
                 @if (getUserLastOnlineAt(getMessageInfor().other_participant)) {
-                Hoạt động {{ relativeTime(getUserLastOnlineAt(getMessageInfor().other_participant)) }} trước
+                Hoạt động
+                {{
+                relativeTime(
+                getUserLastOnlineAt(getMessageInfor().other_participant)
+                )
+                }}
+                trước
                 } @else {
                 Ngoại tuyến
                 }
@@ -54,19 +86,21 @@
 
     <!-- Action buttons -->
     <div class="chat-header-actions">
-        <button class="header-action-btn" title="Gọi điện" (click)="handleVoiceCall()">
-            <i class="bi bi-telephone"></i>
-        </button>
-        <button class="header-action-btn" title="Gọi video" (click)="handleVideoCall()">
-            <i class="bi bi-camera-video"></i>
-        </button>
+        @if (!isBlocked() && isCurrentUserActiveMember()) {
+            <button class="header-action-btn" title="Gọi điện" (click)="handleVoiceCall()">
+                <i class="bi bi-telephone"></i>
+            </button>
+            <button class="header-action-btn" title="Gọi video" (click)="handleVideoCall()">
+                <i class="bi bi-camera-video"></i>
+            </button>
+        }
         <button class="header-action-btn" title="Thông tin" (click)="handleInfo()">
             <i class="bi bi-info-circle"></i>
         </button>
     </div>
 </div>
 
-@if (hasJoinableGroupCall()) {
+@if (isCurrentUserActiveMember() && hasJoinableGroupCall()) {
 <div class="ongoing-call-banner" (click)="joinOngoingGroupCall()" role="button" tabindex="0"
     (keydown.enter)="joinOngoingGroupCall()" (keydown.space)="joinOngoingGroupCall()">
     <div class="ongoing-call-indicator"></div>
@@ -76,23 +110,23 @@
 }
 
 <!-- ============================================================
-        PINNED MESSAGE BAR
-        ============================================================ -->
+            PINNED MESSAGE BAR
+            ============================================================ -->
 @if (pinnedMessages() && pinnedMessages().length > 0) {
 <div class="pinned-bar-wrap">
     <!-- Bar hiển thị tin nhắn ghim đầu tiên (click để scroll) -->
     @if (!showPinnedDropdown) {
-    <div class="pinned-bar" (click)="scrollToMessage(pinnedMessages()[pinnedMessages().length - 1].message_id)">
-
+    <div class="pinned-bar" (click)="
+                            scrollToMessage(pinnedMessages()[pinnedMessages().length - 1].message_id)
+                        ">
         <div class="pinned-item-icon">
             <i class="bi bi-pin-angle"></i>
         </div>
         <div class="pinned-item-body">
             <div class="pinned-item-title">Tin nhắn</div>
             <div class="pinned-item-preview">
-                <span class="pinned-item-sender">{{ pinnedMessages()[pinnedMessages().length - 1].sender_name || 'Ai
-                    đó'
-                    }}: </span>
+                <span class="pinned-item-sender">{{ getSenderDisplayName(pinnedMessages()[pinnedMessages().length -
+                    1].sender_id, pinnedMessages()[pinnedMessages().length - 1].sender_name) }}: </span>
                 <span class="pinned-item-text"
                     [innerHTML]="formatPinnedMessagePreview(pinnedMessages()[pinnedMessages().length - 1])"></span>
             </div>
@@ -108,21 +142,31 @@
         }
 
         <!-- Three-dots menu cho preview bar -->
+        @if (isCurrentUserActiveMember()) {
         <div class="pinned-menu-wrap" (click)="$event.stopPropagation()" (mouseenter)="onPinnedMenuMouseEnter()"
             (mouseleave)="onPinnedMenuMouseLeave()">
-            <button class="pinned-item-menu"
-                (click)="togglePinnedMenu($event, pinnedMessages()[pinnedMessages().length - 1].id)">
+            <button class="pinned-item-menu" (click)="
+                                    togglePinnedMenu(
+                                        $event,
+                                        pinnedMessages()[pinnedMessages().length - 1].id
+                                    )
+                                ">
                 <i class="bi bi-three-dots"></i>
             </button>
-            @if (openPinnedMenuId === pinnedMessages()[pinnedMessages().length - 1].id) {
+            @if (
+            openPinnedMenuId === pinnedMessages()[pinnedMessages().length - 1].id
+            ) {
             <div class="pinned-context-menu">
-                <button class="pinned-ctx-item danger"
-                    (click)="unpinMessage(pinnedMessages()[pinnedMessages().length - 1]); openPinnedMenuId = null">
+                <button class="pinned-ctx-item danger" (click)="
+                                            unpinMessage(pinnedMessages()[pinnedMessages().length - 1]);
+                                            openPinnedMenuId = null
+                                        ">
                     <i class="bi bi-pin-angle"></i> Bỏ ghim
                 </button>
             </div>
             }
         </div>
+        }
     </div>
     }
 
@@ -143,11 +187,12 @@
             <div class="pinned-item-body">
                 <div class="pinned-item-title">Tin nhắn</div>
                 <div class="pinned-item-preview">
-                    <span class="pinned-item-sender">{{ pm.sender_name || 'Ai đó' }}: </span>
+                    <span class="pinned-item-sender">{{ getSenderDisplayName(pm.sender_id, pm.sender_name) }}: </span>
                     <span class="pinned-item-text" [innerHTML]="formatPinnedMessagePreview(pm)"></span>
                 </div>
             </div>
             <!-- Three-dots menu từng item -->
+            @if (isCurrentUserActiveMember()) {
             <div class="pinned-menu-wrap" (click)="$event.stopPropagation()" (mouseenter)="onPinnedMenuMouseEnter()"
                 (mouseleave)="onPinnedMenuMouseLeave()">
                 <button class="pinned-item-menu" (click)="togglePinnedMenu($event, pm.id)">
@@ -161,6 +206,7 @@
                 </div>
                 }
             </div>
+            }
         </div>
         }
     </div>
@@ -169,21 +215,22 @@
 }
 
 <!-- ============================================================
-        MESSAGES SCROLL AREA
-        ============================================================ -->
+            MESSAGES SCROLL AREA
+            ============================================================ -->
 <div class="messages-scroll" [class.is-loading]="!isLoaded || loading"
     [class.has-pinned]="pinnedMessages() && pinnedMessages().length > 0"
     [class.has-ongoing-call]="hasJoinableGroupCall()" #messagesContent (scroll)="onMessagesScroll()">
     <div class="messages-inner">
-
         @if (!isLoaded || loading) {
         <div class="chat-empty is-loading">
             <i class="bi bi-arrow-repeat"></i>
             <p>Đang tải tin nhắn...</p>
         </div>
-        }
-        @else if (isLoaded && !loading && (getMessagesData().homeMessagesData?.messages?.length || 0) === 0) {
-
+        } @else if (
+        isLoaded &&
+        !loading &&
+        (getMessagesData().homeMessagesData?.messages?.length || 0) === 0
+        ) {
         <div class="no-messages">
             <div class="no-messages-icon-wrap">
                 <i class="bi bi-chat-square-heart"></i>
@@ -191,24 +238,34 @@
             <div class="no-messages-content">
                 <h4 class="no-messages-title">Chưa có tin nhắn nào</h4>
                 @if (getMessageInfor().type === 'group') {
-                <p class="no-messages-subtitle">Hãy gửi lời chào đầu tiên để bắt đầu cuộc trò chuyện nhóm.</p>
+                <p class="no-messages-subtitle">
+                    Hãy gửi lời chào đầu tiên để bắt đầu cuộc trò chuyện nhóm.
+                </p>
                 } @else {
-                <p class="no-messages-subtitle">Bắt đầu cuộc trò chuyện bằng một tin nhắn thân thiện.</p>
+                <p class="no-messages-subtitle">
+                    Bắt đầu cuộc trò chuyện bằng một tin nhắn thân thiện.
+                </p>
                 }
             </div>
         </div>
-        }
-        @else {
+        } @else {
         <!-- Loading more -->
         @if (isLoadingMore) {
         <div class="loading-more">Đang tải thêm tin nhắn...</div>
         }
 
-        @for (msg of (getMessagesData().homeMessagesData?.messages || []); track trackByMessageId($index, msg); let
-        i =
-        $index) {
+        @for (
+        msg of getMessagesData().homeMessagesData?.messages || [];
+        track trackByMessageId($index, msg);
+        let i = $index
+        ) {
         <!-- Date separator -->
-        @if (shouldShowDateSeparator(msg, getMessagesData().homeMessagesData.messages[i-1])) {
+        @if (
+        shouldShowDateSeparator(
+        msg,
+        getMessagesData().homeMessagesData.messages[i - 1]
+        )
+        ) {
         <div class="date-separator">
             <span>{{ formatDateLabel(msg.created_at) }}</span>
         </div>
@@ -218,40 +275,70 @@
         @if (msg.message_type === 'system') {
         <div class="message-system">
             <span class="system-text">
-                {{ getLastMessageSenderName(msg.sender_id, msg.sender_name) }}
-                <span [innerHTML]="msg.content"></span>
+                @if ((msg.content || '').includes('đã ghim') || (msg.content || '').includes('đã bỏ ghim')) {
+                <i class="bi bi-pin-angle me-1"></i>
+                }
+                @if ((msg.content || '').includes('@[') || (msg.content || '').includes('<i')) { <span
+                    [innerHTML]="formatMessageText(msg.content)"></span>
+            } @else {
+            {{ getLastMessageSenderName(msg.sender_id, msg.sender_name) }}
+            <span [innerHTML]="msg.content"></span>
+            }
             </span>
         </div>
         } @else {
         <!-- ===== MY MESSAGES ===== -->
         @if (currentUserId() === msg.sender_id) {
-        <div class="message-row me-row" id="message-{{msg.id}}" [class.highlighted]="highlightedMessageId === msg.id">
+        <div class="message-row me-row" id="message-{{ msg.id }}" [class.highlighted]="highlightedMessageId === msg.id">
             <div class="me-row-content">
-
                 <div class="msg-content-col-me">
-
                     <!-- Reply preview -->
                     @if (msg.parent_message_id) {
                     <div class="reply-sender-label me-label">
                         <i class="bi bi-reply me-1"></i>
-                        @if (msg.parent_message_info.parent_message_sender_id === currentUserId()) {
+                        @if (
+                        msg.parent_message_info
+                        .parent_message_sender_id ===
+                        currentUserId()
+                        ) {
                         Bạn đã trả lời chính mình
                         } @else {
-                        Bạn đã trả lời {{ msg.parent_message_info.parent_message_name }}
+                        Bạn đã trả lời {{ getSenderDisplayName(msg.parent_message_info.parent_message_sender_id, msg.parent_message_info.parent_message_name) }}
                         }
                     </div>
-                    <div class="reply-info-me" (click)="scrollToMessage(msg.parent_message_info.parent_message_id)">
+                    <div class="reply-info-me" (click)="
+                                                        scrollToMessage(
+                                                            msg.parent_message_info.parent_message_id
+                                                        )
+                                                    ">
                         <div class="reply-content-preview">
-                            @if (!msg.parent_message_info.parent_message_is_deleted) {
-                            @if (msg.parent_message_info.parent_message_type === 'text') {
-                            <div [innerHTML]="formatMessageText(msg.parent_message_info.parent_message_content)"></div>
+                            @if (
+                            !msg.parent_message_info
+                            .parent_message_is_deleted
+                            ) {
+                            @if (
+                            msg.parent_message_info
+                            .parent_message_type === 'text'
+                            ) {
+                            <div [innerHTML]="
+                                                                        formatMessageText(
+                                                                            msg.parent_message_info
+                                                                                .parent_message_content
+                                                                        )
+                                                                    "></div>
                             } @else {
-                            @if (msg.parent_message_info.parent_message_type === 'image' ||
-                            msg.parent_message_info.parent_message_type === 'video') {
-                            <img [src]="msg.parent_message_info.parent_message_thumbnail_url"
-                                class="reply-preview-img-bubble">
+                            @if (
+                            msg.parent_message_info
+                            .parent_message_type ===
+                            'image' ||
+                            msg.parent_message_info
+                            .parent_message_type === 'video'
+                            ) {
+                            <img [src]="
+                                                                            msg.parent_message_info
+                                                                                .parent_message_thumbnail_url
+                                                                        " class="reply-preview-img-bubble" />
                             }
-
                             }
                             } @else {
                             <span class="deleted-msg">Tin nhắn đã được gỡ</span>
@@ -264,30 +351,65 @@
                         <div class="bubble-row">
                             @if (msg.message_type !== 'call') {
                             <div class="bubble-anchor me">
-                                @if (!msg.is_deleted) {
-                                <div class="message-actions"
-                                    [class.active]="showMenuId === msg.id || reactionPickerMessageId === msg.id">
-                                    <button class="action-btn" title="Tùy chọn" (click)="toggleMenu(msg.id, $event)">
+                                @if (!msg.is_deleted && isCurrentUserActiveMember()) {
+                                <div class="message-actions" [class.active]="
+                                                                        showMenuId === msg.id ||
+                                                                        reactionPickerMessageId ===
+                                                                            msg.id
+                                                                    ">
+                                    <button class="action-btn" title="Tùy chọn" (click)="
+                                                                            toggleMenu(msg.id, $event)
+                                                                        ">
                                         <i class="bi bi-three-dots-vertical"></i>
                                     </button>
                                     <button class="action-btn" title="Trả lời" (click)="replyMessage(msg.id)">
                                         <i class="bi bi-reply"></i>
                                     </button>
-                                    <button class="action-btn reaction-btn" title="Thả emoji"
-                                        (click)="toggleReactionPicker(msg.id, $event)">
+                                    <button class="action-btn reaction-btn" title="Thả emoji" (click)="
+                                                                            toggleReactionPicker(
+                                                                                msg.id,
+                                                                                $event
+                                                                            )
+                                                                        ">
                                         <i class="bi bi-emoji-smile"></i>
                                     </button>
-                                    @if (reactionPickerMessageId === msg.id) {
-                                    <div class="reaction-picker" [class.drop-up]="isReactionPickerDropUp(msg.id)"
-                                        [class.drop-down]="!isReactionPickerDropUp(msg.id)"
-                                        (click)="$event.stopPropagation()">
-                                        @for (emoji of quickReactionEmojis; track emoji) {
-                                        <button class="reaction-emoji-btn" type="button"
-                                            (click)="toggleReaction(msg, emoji, $event)">
-                                            @if (reactionLottieUrls[emoji]) {
-                                            <lottie-player class="lottie-emoji" [src]="reactionLottieUrls[emoji]"
-                                                background="transparent" speed="1" direction="1" mode="normal" loop
-                                                autoplay></lottie-player>
+                                    @if (
+                                    reactionPickerMessageId ===
+                                    msg.id
+                                    ) {
+                                    <div class="reaction-picker" [class.drop-up]="
+                                                                                isReactionPickerDropUp(
+                                                                                    msg.id
+                                                                                )
+                                                                            " [class.drop-down]="
+                                                                                !isReactionPickerDropUp(
+                                                                                    msg.id
+                                                                                )
+                                                                            " (click)="
+                                                                                $event.stopPropagation()
+                                                                            ">
+                                        @for (
+                                        emoji of quickReactionEmojis;
+                                        track emoji
+                                        ) {
+                                        <button class="reaction-emoji-btn" type="button" (click)="
+                                                                                        toggleReaction(
+                                                                                            msg,
+                                                                                            emoji,
+                                                                                            $event
+                                                                                        )
+                                                                                    ">
+                                            @if (
+                                            reactionLottieUrls[
+                                            emoji
+                                            ]
+                                            ) {
+                                            <lottie-player class="lottie-emoji" [src]="
+                                                                                                reactionLottieUrls[
+                                                                                                    emoji
+                                                                                                ]
+                                                                                            " background="transparent"
+                                                speed="1" direction="1" mode="normal" loop autoplay></lottie-player>
                                             } @else {
                                             {{ emoji }}
                                             }
@@ -296,28 +418,54 @@
                                     </div>
                                     }
                                     @if (showMenuId === msg.id) {
-                                    <div class="msg-dropdown" [class.drop-up]="isMenuDropUp(msg.id)"
-                                        [class.drop-down]="!isMenuDropUp(msg.id)"
-                                        [class.flip-h]="isMenuFlipHorizontal(msg.id)">
-                                        @if (msg.message_type === 'text') {
-                                        <button class="dropdown-item" (click)="openEditModal(msg)">
+                                    <div class="msg-dropdown" [class.drop-up]="
+                                                                                isMenuDropUp(msg.id)
+                                                                            " [class.drop-down]="
+                                                                                !isMenuDropUp(msg.id)
+                                                                            " [class.flip-h]="
+                                                                                isMenuFlipHorizontal(
+                                                                                    msg.id
+                                                                                )
+                                                                            ">
+                                        @if (
+                                        msg.message_type ===
+                                        'text'
+                                        ) {
+                                        <button class="dropdown-item" (click)="
+                                                                                        openEditModal(
+                                                                                            msg
+                                                                                        )
+                                                                                    ">
                                             <i class="bi bi-pencil me-2"></i>Sửa
                                         </button>
                                         }
-                                        <button class="dropdown-item" (click)="forwardMessage(msg)">
+                                        <button class="dropdown-item" (click)="
+                                                                                    forwardMessage(msg)
+                                                                                ">
                                             <i class="bi bi-forward me-2"></i>Chuyển tiếp
                                         </button>
-                                        @let currentPinned = getPinnedMessage(msg.id);
+                                        @let currentPinned =
+                                        getPinnedMessage(
+                                        msg.id
+                                        );
                                         @if (currentPinned) {
-                                        <button class="dropdown-item" (click)="unpinMessage(currentPinned)">
+                                        <button class="dropdown-item" (click)="
+                                                                                        unpinMessage(
+                                                                                            currentPinned
+                                                                                        )
+                                                                                    ">
                                             <i class="bi bi-pin-angle me-2"></i>Bỏ ghim
                                         </button>
                                         } @else {
-                                        <button class="dropdown-item" (click)="pinMessage(msg)">
+                                        <button class="dropdown-item" (click)="
+                                                                                        pinMessage(msg)
+                                                                                    ">
                                             <i class="bi bi-pin-angle me-2"></i>Ghim
                                         </button>
                                         }
-                                        <button class="dropdown-item danger" (click)="deleteMessage(msg)">
+                                        <button class="dropdown-item danger" (click)="
+                                                                                    deleteMessage(msg)
+                                                                                ">
                                             <i class="bi bi-trash me-2"></i>Gỡ
                                         </button>
                                     </div>
@@ -325,32 +473,59 @@
                                 </div>
                                 }
 
-                                <div class="bubble-me" [class.bubble-deleted]="msg.is_deleted"
-                                    [class.bubble-image]="msg.message_type === 'image'">
+                                <div class="bubble-me" [class.bubble-deleted]="msg.is_deleted" [class.bubble-image]="
+                                                                    msg.message_type === 'image'
+                                                                ">
                                     @if (msg.is_deleted) {
                                     Tin nhắn đã được gỡ
                                     } @else {
                                     @if (msg.message_type === 'image') {
-                                    <div class="msg-image-wrap" (click)="openImageViewer(msg.file_url)">
-                                        <img [src]="fileUtils.resolveMediaUrl(msg.file_url)" class="msg-image"
-                                            alt="Hình ảnh">
+                                    <div class="msg-image-wrap" (click)="
+                                                                                openImageViewer(
+                                                                                    msg.file_url
+                                                                                )
+                                                                            ">
+                                        <img [src]="
+                                                                                    fileUtils.resolveMediaUrl(
+                                                                                        msg.file_url
+                                                                                    )
+                                                                                " class="msg-image" alt="Hình ảnh" />
                                     </div>
                                     }
                                     @if (msg.message_type === 'video') {
                                     <div class="msg-video-wrap">
-                                        <video [src]="fileUtils.resolveMediaUrl(msg.file_url)" controls
-                                            class="msg-video"></video>
+                                        <video [src]="
+                                                                                    fileUtils.resolveMediaUrl(
+                                                                                        msg.file_url
+                                                                                    )
+                                                                                " controls class="msg-video"></video>
                                     </div>
                                     }
                                     @if (msg.message_type === 'file') {
                                     <div class="msg-file-wrap">
-                                        <button type="button" class="msg-file-link"
-                                            (click)="fileUtils.openFileInNewTab(msg.file_url, $event)">
-                                            <i class="bi" [class]="fileUtils.getAttachmentIconClass(msg)"></i>
+                                        <button type="button" class="msg-file-link" (click)="
+                                                                                    fileUtils.openFileInNewTab(
+                                                                                        msg.file_url,
+                                                                                        $event
+                                                                                    )
+                                                                                ">
+                                            <i class="bi" [class]="
+                                                                                        fileUtils.getAttachmentIconClass(
+                                                                                            msg
+                                                                                        )
+                                                                                    "></i>
                                             <div class="msg-file-details">
-                                                <span class="msg-file-name">{{ msg.file_name || 'Tệp đính kèm' }}</span>
-                                                @if (msg.file_size) {
-                                                <span class="msg-file-size">{{ fileUtils.formatFileSize(msg.file_size)
+                                                <span class="msg-file-name">{{
+                                                    msg.file_name ||
+                                                    'Tệp đính kèm'
+                                                    }}</span>
+                                                @if (
+                                                msg.file_size
+                                                ) {
+                                                <span class="msg-file-size">{{
+                                                    fileUtils.formatFileSize(
+                                                    msg.file_size
+                                                    )
                                                     }}</span>
                                                 }
                                             </div>
@@ -358,21 +533,45 @@
                                     </div>
                                     }
                                     @if (msg.message_type === 'text') {
-                                    <div [innerHTML]="formatMessageText(msg.content)"></div>
-                                    @let preview = getStoredLinkPreview(msg);
+                                    <div [innerHTML]="
+                                                                                formatMessageText(
+                                                                                    msg.content
+                                                                                )
+                                                                            "></div>
+                                    @let preview =
+                                    getStoredLinkPreview(msg);
                                     @if (preview) {
                                     <a class="message-link-card" [href]="preview.url" target="_blank"
                                         rel="noopener noreferrer">
                                         @if (preview.image) {
-                                        <img class="message-link-image" [src]="preview.image"
-                                            [alt]="preview.title || preview.siteName" referrerPolicy="no-referrer">
+                                        <img class="message-link-image" [src]="
+                                                                                            preview.image
+                                                                                        " [alt]="
+                                                                                            preview.title ||
+                                                                                            preview.siteName
+                                                                                        "
+                                            referrerPolicy="no-referrer" />
                                         }
                                         <div class="message-link-body">
-                                            <div class="message-link-site">{{ preview.hostname || preview.siteName }}
+                                            <div class="message-link-site">
+                                                {{
+                                                preview.hostname ||
+                                                preview.siteName
+                                                }}
                                             </div>
-                                            <div class="message-link-title">{{ preview.title }}</div>
-                                            @if (preview.description) {
-                                            <div class="message-link-desc">{{ preview.description }}</div>
+                                            <div class="message-link-title">
+                                                {{
+                                                preview.title
+                                                }}
+                                            </div>
+                                            @if (
+                                            preview.description
+                                            ) {
+                                            <div class="message-link-desc">
+                                                {{
+                                                preview.description
+                                                }}
+                                            </div>
                                             }
                                         </div>
                                     </a>
@@ -395,12 +594,25 @@
                                 </div>
 
                                 @let reactions = getMessageReactions(msg);
-                                @if (msg.message_type !== 'call' && !msg.is_deleted && reactions.count > 0) {
+                                @if (
+                                msg.message_type !== 'call' &&
+                                !msg.is_deleted &&
+                                reactions.count > 0
+                                ) {
                                 <div class="message-reactions me">
-                                    <div class="reaction-chip" (click)="openReactionModal(msg, $event)">
-                                        <span class="reaction-emoji">{{ reactions.emoji_char }}</span>
+                                    <div class="reaction-chip" (click)="
+                                                                            openReactionModal(
+                                                                                msg,
+                                                                                $event
+                                                                            )
+                                                                        ">
+                                        <span class="reaction-emoji">{{
+                                            reactions.emoji_char
+                                            }}</span>
                                         @if (reactions.count > 1) {
-                                        <span class="reaction-count">{{ reactions.count }}</span>
+                                        <span class="reaction-count">{{
+                                            reactions.count
+                                            }}</span>
                                         }
                                     </div>
                                 </div>
@@ -410,39 +622,69 @@
                             <div class="call-bubble-modern">
                                 <div class="call-top-section">
                                     <div class="call-icon-circle">
-                                        <i [className]="getCallIcon(msg.call)"></i>
+                                        <i [className]="
+                                                                            getCallIcon(msg.call)
+                                                                        "></i>
                                     </div>
                                     <div class="call-info-cols">
-                                        <div class="call-title-text">{{ getCallMainContent(msg.call) }}</div>
-                                        <div class="call-sub-text">{{ getCallDescription(msg.call) }}</div>
+                                        <div class="call-title-text">
+                                            {{
+                                            getCallMainContent(msg.call)
+                                            }}
+                                        </div>
+                                        <div class="call-sub-text">
+                                            {{
+                                            getCallDescription(msg.call)
+                                            }}
+                                        </div>
                                     </div>
                                 </div>
-                                <button class="call-action-btn-modern" (click)="handleVoiceCall()">Gọi lại</button>
+                                @if (isCurrentUserActiveMember()) {
+                                <button class="call-action-btn-modern" (click)="handleVoiceCall()">
+                                    Gọi lại
+                                </button>
+                                }
                             </div>
                             }
                         </div>
                     </div>
 
                     <!-- Edited badge -->
-                    @if (msg.is_edited && !msg.is_deleted) {
+                    @if (
+                    msg.is_edited &&
+                    !msg.is_deleted
+                    ) {
                     <div class="edited-badge me">Đã chỉnh sửa</div>
                     }
 
                     <!-- Timestamp -->
-                    @if (i === getMessagesData().homeMessagesData.messages.length - 1 ||
-                    getMessagesData().homeMessagesData.messages[i+1].sender_id !== msg.sender_id ||
-                    getMessagesData().homeMessagesData.messages[i+1].message_type === 'system') {
+                    @if (
+                    i ===
+                    getMessagesData().homeMessagesData.messages.length -
+                    1 ||
+                    getMessagesData().homeMessagesData.messages[i + 1]
+                    .sender_id !== msg.sender_id ||
+                    getMessagesData().homeMessagesData.messages[i + 1]
+                    .message_type === 'system'
+                    ) {
                     <div class="msg-timestamp me">
-                        @if (i === getMessagesData().homeMessagesData.messages.length - 1 && messageStatus() !== '')
-                        {
-                        <span class="msg-status" [ngClass]="{'msg-error': messageStatus() === 'Lỗi'}">
+                        @if (
+                        i ===
+                        getMessagesData().homeMessagesData.messages
+                        .length -
+                        1 && messageStatus() !== ''
+                        ) {
+                        <span class="msg-status" [ngClass]="{
+                                                                'msg-error': messageStatus() === 'Lỗi',
+                                                            }">
                             @if (messageStatus() !== 'Lỗi') {
                             <i class="bi bi-check-all"></i>
                             }
                             @if (messageStatus() === 'Lỗi') {
                             <i class="bi bi-exclamation-circle"></i>
                             }
-                            {{ messageStatus() }} lúc {{ formatTime(msg.created_at) }}
+                            {{ messageStatus() }} lúc
+                            {{ formatTime(msg.created_at) }}
                         </span>
                         }
                     </div>
@@ -452,58 +694,89 @@
         </div>
         } @else {
         <!-- ===== OTHER MESSAGES ===== -->
-        <div class="message-row other-row" id="message-{{msg.id}}"
+        <div class="message-row other-row" id="message-{{ msg.id }}"
             [class.highlighted]="highlightedMessageId === msg.id">
-
             <!-- Sender name (group only) -->
-            @if (getMessagesData().homeMessagesData.conversation_type === 'group' &&
-            (i === 0 || getMessagesData().homeMessagesData.messages[i-1].sender_id !== msg.sender_id ||
-            getMessagesData().homeMessagesData.messages[i-1].message_type === 'system' ||
+            @if (
+            getMessagesData().homeMessagesData.conversation_type ===
+            'group' &&
+            (i === 0 ||
+            getMessagesData().homeMessagesData.messages[i - 1]
+            .sender_id !== msg.sender_id ||
+            getMessagesData().homeMessagesData.messages[i - 1]
+            .message_type === 'system' ||
             getMessageDate(msg.created_at) !==
-            getMessageDate(getMessagesData().homeMessagesData.messages[i-1]?.created_at)) &&
-            !msg.parent_message_id) {
+            getMessageDate(
+            getMessagesData().homeMessagesData.messages[i - 1]
+            ?.created_at
+            )) &&
+            !msg.parent_message_id
+            ) {
             <div class="sender-name">
-                {{ msg.sender_name }}
+                {{ getSenderDisplayName(msg.sender_id, msg.sender_name) }}
             </div>
             }
 
             <div class="other-row-content">
                 <!-- Avatar -->
-                @if (isLastOfSenderOrDay(i, getMessagesData().homeMessagesData.messages)) {
+                @if (
+                isLastOfSenderOrDay(
+                i,
+                getMessagesData().homeMessagesData.messages
+                )
+                ) {
                 <div class="msg-avatar-wrap">
-                    <img class="msg-avatar" [src]="msg.sender_avatar" [alt]="msg.sender_name"
-                        (error)="msg.sender_avatar = 'null' + msg.sender_id">
+                    <img class="msg-avatar" [src]="msg.sender_avatar || 'assets/AvatarDefault.jpg'" [alt]="msg.sender_name" />
                 </div>
                 } @else {
                 <div class="msg-avatar-placeholder"></div>
                 }
 
                 <div class="msg-content-col">
-
                     <!-- Reply preview -->
                     @if (msg.parent_message_id) {
                     <div class="reply-sender-label other-label">
                         <i class="bi bi-reply me-1"></i>
                         @if (msg.parent_message_info.parent_message_sender_id === currentUserId()) {
-                        {{ msg.sender_name }} đã trả lời bạn
+                        {{ getSenderDisplayName(msg.sender_id, msg.sender_name) }} đã trả lời bạn
                         } @else if (msg.parent_message_info.parent_message_sender_id === msg.sender_id) {
-                        {{ msg.sender_name }} đã trả lời chính mình
+                        {{ getSenderDisplayName(msg.sender_id, msg.sender_name) }} đã trả lời chính mình
                         } @else {
-                        {{ msg.sender_name }} đã trả lời {{ msg.parent_message_info.parent_message_name }}
+                        {{ getSenderDisplayName(msg.sender_id, msg.sender_name) }} đã trả lời {{
+                        getSenderDisplayName(msg.parent_message_info.parent_message_sender_id,
+                        msg.parent_message_info.parent_message_name) }}
                         }
                     </div>
-                    <div class="reply-info-other" (click)="scrollToMessage(msg.parent_message_info.parent_message_id)">
+                    <div class="reply-info-other" (click)="
+                                                        scrollToMessage(
+                                                            msg.parent_message_info.parent_message_id
+                                                        )
+                                                    ">
                         <div class="reply-content-preview">
-                            @if (!msg.parent_message_info.parent_message_is_deleted) {
-                            @if (msg.parent_message_info.parent_message_type === 'text') {
-                            <div [innerHTML]="formatMessageText(msg.parent_message_info.parent_message_content)"></div>
+                            @if (
+                            !msg.parent_message_info
+                            .parent_message_is_deleted
+                            ) {
+                            @if (
+                            msg.parent_message_info
+                            .parent_message_type === 'text'
+                            ) {
+                            <div [innerHTML]="
+                                                                        formatMessageText(
+                                                                            msg.parent_message_info
+                                                                                .parent_message_content
+                                                                        )
+                                                                    "></div>
                             } @else {
-                            @if (msg.parent_message_info.parent_message_type === 'image' ||
-                            msg.parent_message_info.parent_message_type === 'video') {
-                            <img [src]="msg.parent_message_info.parent_message_thumbnail_url"
-                                class="reply-preview-img-bubble">
+                            @if (
+                            msg.parent_message_info
+                            .parent_message_type ===
+                            'image' ||
+                            msg.parent_message_info
+                            .parent_message_type === 'video'
+                            ) {
+                            <img [src]="msg.parent_message_info.parent_message_thumbnail_url" class="reply-preview-img-bubble" />
                             }
-
                             }
                             } @else {
                             <span class="deleted-msg">Tin nhắn đã được gỡ</span>
@@ -517,33 +790,71 @@
                             @if (msg.message_type !== 'call') {
                             @if (msg.is_deleted) {
                             <div class="bubble-anchor other">
-                                <div class="bubble-other bubble-deleted">Tin nhắn đã được gỡ</div>
+                                <div class="bubble-other bubble-deleted">
+                                    Tin nhắn đã được gỡ
+                                </div>
                             </div>
                             } @else {
                             <div class="bubble-anchor other">
-                                <div class="message-actions"
-                                    [class.active]="showMenuId === msg.id || reactionPickerMessageId === msg.id">
-                                    <button class="action-btn reaction-btn" title="Thả emoji"
-                                        (click)="toggleReactionPicker(msg.id, $event)">
+                                @if (isCurrentUserActiveMember()) {
+                                <div class="message-actions" [class.active]="
+                                                                        showMenuId === msg.id ||
+                                                                        reactionPickerMessageId ===
+                                                                            msg.id
+                                                                    ">
+                                    <button class="action-btn reaction-btn" title="Thả emoji" (click)="
+                                                                            toggleReactionPicker(
+                                                                                msg.id,
+                                                                                $event
+                                                                            )
+                                                                        ">
                                         <i class="bi bi-emoji-smile"></i>
                                     </button>
                                     <button class="action-btn" title="Trả lời" (click)="replyMessage(msg.id)">
                                         <i class="bi bi-reply"></i>
                                     </button>
-                                    <button class="action-btn" title="Tùy chọn" (click)="toggleMenu(msg.id, $event)">
+                                    <button class="action-btn" title="Tùy chọn" (click)="
+                                                                            toggleMenu(msg.id, $event)
+                                                                        ">
                                         <i class="bi bi-three-dots-vertical"></i>
                                     </button>
-                                    @if (reactionPickerMessageId === msg.id) {
-                                    <div class="reaction-picker" [class.drop-up]="isReactionPickerDropUp(msg.id)"
-                                        [class.drop-down]="!isReactionPickerDropUp(msg.id)"
-                                        (click)="$event.stopPropagation()">
-                                        @for (emoji of quickReactionEmojis; track emoji) {
-                                        <button class="reaction-emoji-btn" type="button"
-                                            (click)="toggleReaction(msg, emoji, $event)">
-                                            @if (reactionLottieUrls[emoji]) {
-                                            <lottie-player class="lottie-emoji" [src]="reactionLottieUrls[emoji]"
-                                                background="transparent" speed="1" direction="1" mode="normal" loop
-                                                autoplay></lottie-player>
+                                    @if (
+                                    reactionPickerMessageId ===
+                                    msg.id
+                                    ) {
+                                    <div class="reaction-picker" [class.drop-up]="
+                                                                                isReactionPickerDropUp(
+                                                                                    msg.id
+                                                                                )
+                                                                            " [class.drop-down]="
+                                                                                !isReactionPickerDropUp(
+                                                                                    msg.id
+                                                                                )
+                                                                            " (click)="
+                                                                                $event.stopPropagation()
+                                                                            ">
+                                        @for (
+                                        emoji of quickReactionEmojis;
+                                        track emoji
+                                        ) {
+                                        <button class="reaction-emoji-btn" type="button" (click)="
+                                                                                        toggleReaction(
+                                                                                            msg,
+                                                                                            emoji,
+                                                                                            $event
+                                                                                        )
+                                                                                    ">
+                                            @if (
+                                            reactionLottieUrls[
+                                            emoji
+                                            ]
+                                            ) {
+                                            <lottie-player class="lottie-emoji" [src]="
+                                                                                                reactionLottieUrls[
+                                                                                                    emoji
+                                                                                                ]
+                                                                                            " background="transparent"
+                                                speed="1" direction="1" mode="normal" loop autoplay></lottie-player>
                                             } @else {
                                             {{ emoji }}
                                             }
@@ -552,48 +863,94 @@
                                     </div>
                                     }
                                     @if (showMenuId === msg.id) {
-                                    <div class="msg-dropdown" [class.drop-up]="isMenuDropUp(msg.id)"
-                                        [class.drop-down]="!isMenuDropUp(msg.id)"
-                                        [class.flip-h]="isMenuFlipHorizontal(msg.id)">
-                                        <button class="dropdown-item" (click)="forwardMessage(msg)">
+                                    <div class="msg-dropdown" [class.drop-up]="
+                                                                                isMenuDropUp(msg.id)
+                                                                            " [class.drop-down]="
+                                                                                !isMenuDropUp(msg.id)
+                                                                            " [class.flip-h]="
+                                                                                isMenuFlipHorizontal(
+                                                                                    msg.id
+                                                                                )
+                                                                            ">
+                                        <button class="dropdown-item" (click)="
+                                                                                    forwardMessage(msg)
+                                                                                ">
                                             <i class="bi bi-forward me-2"></i>Chuyển tiếp
                                         </button>
-                                        @let currentPinned = getPinnedMessage(msg.id);
+                                        @let currentPinned =
+                                        getPinnedMessage(
+                                        msg.id
+                                        );
                                         @if (currentPinned) {
-                                        <button class="dropdown-item" (click)="unpinMessage(currentPinned)">
+                                        <button class="dropdown-item" (click)="
+                                                                                        unpinMessage(
+                                                                                            currentPinned
+                                                                                        )
+                                                                                    ">
                                             <i class="bi bi-pin-angle me-2"></i>Bỏ ghim
                                         </button>
                                         } @else {
-                                        <button class="dropdown-item" (click)="pinMessage(msg)">
+                                        <button class="dropdown-item" (click)="
+                                                                                        pinMessage(msg)
+                                                                                    ">
                                             <i class="bi bi-pin-angle me-2"></i>Ghim
                                         </button>
                                         }
                                     </div>
                                     }
                                 </div>
+                                }
 
-                                <div class="bubble-other" [class.bubble-image]="msg.message_type === 'image'">
+                                <div class="bubble-other" [class.bubble-image]="
+                                                                        msg.message_type === 'image'
+                                                                    ">
                                     @if (msg.message_type === 'image') {
-                                    <div class="msg-image-wrap" (click)="openImageViewer(msg.file_url)">
-                                        <img [src]="fileUtils.resolveMediaUrl(msg.file_url)" class="msg-image"
-                                            alt="Hình ảnh">
+                                    <div class="msg-image-wrap" (click)="
+                                                                                openImageViewer(
+                                                                                    msg.file_url
+                                                                                )
+                                                                            ">
+                                        <img [src]="
+                                                                                    fileUtils.resolveMediaUrl(
+                                                                                        msg.file_url
+                                                                                    )
+                                                                                " class="msg-image" alt="Hình ảnh" />
                                     </div>
                                     }
                                     @if (msg.message_type === 'video') {
                                     <div class="msg-video-wrap">
-                                        <video [src]="fileUtils.resolveMediaUrl(msg.file_url)" controls
-                                            class="msg-video"></video>
+                                        <video [src]="
+                                                                                    fileUtils.resolveMediaUrl(
+                                                                                        msg.file_url
+                                                                                    )
+                                                                                " controls class="msg-video"></video>
                                     </div>
                                     }
                                     @if (msg.message_type === 'file') {
                                     <div class="msg-file-wrap">
-                                        <button type="button" class="msg-file-link"
-                                            (click)="fileUtils.openFileInNewTab(msg.file_url, $event)">
-                                            <i class="bi" [class]="fileUtils.getAttachmentIconClass(msg)"></i>
+                                        <button type="button" class="msg-file-link" (click)="
+                                                                                    fileUtils.openFileInNewTab(
+                                                                                        msg.file_url,
+                                                                                        $event
+                                                                                    )
+                                                                                ">
+                                            <i class="bi" [class]="
+                                                                                        fileUtils.getAttachmentIconClass(
+                                                                                            msg
+                                                                                        )
+                                                                                    "></i>
                                             <div class="msg-file-details">
-                                                <span class="msg-file-name">{{ msg.file_name || 'Tệp đính kèm' }}</span>
-                                                @if (msg.file_size) {
-                                                <span class="msg-file-size">{{ fileUtils.formatFileSize(msg.file_size)
+                                                <span class="msg-file-name">{{
+                                                    msg.file_name ||
+                                                    'Tệp đính kèm'
+                                                    }}</span>
+                                                @if (
+                                                msg.file_size
+                                                ) {
+                                                <span class="msg-file-size">{{
+                                                    fileUtils.formatFileSize(
+                                                    msg.file_size
+                                                    )
                                                     }}</span>
                                                 }
                                             </div>
@@ -601,21 +958,45 @@
                                     </div>
                                     }
                                     @if (msg.message_type === 'text') {
-                                    <div [innerHTML]="formatMessageText(msg.content)"></div>
-                                    @let preview = getStoredLinkPreview(msg);
+                                    <div [innerHTML]="
+                                                                                formatMessageText(
+                                                                                    msg.content
+                                                                                )
+                                                                            "></div>
+                                    @let preview =
+                                    getStoredLinkPreview(msg);
                                     @if (preview) {
                                     <a class="message-link-card" [href]="preview.url" target="_blank"
                                         rel="noopener noreferrer">
                                         @if (preview.image) {
-                                        <img class="message-link-image" [src]="preview.image"
-                                            [alt]="preview.title || preview.siteName" referrerPolicy="no-referrer">
+                                        <img class="message-link-image" [src]="
+                                                                                            preview.image
+                                                                                        " [alt]="
+                                                                                            preview.title ||
+                                                                                            preview.siteName
+                                                                                        "
+                                            referrerPolicy="no-referrer" />
                                         }
                                         <div class="message-link-body">
-                                            <div class="message-link-site">{{ preview.hostname || preview.siteName }}
+                                            <div class="message-link-site">
+                                                {{
+                                                preview.hostname ||
+                                                preview.siteName
+                                                }}
                                             </div>
-                                            <div class="message-link-title">{{ preview.title }}</div>
-                                            @if (preview.description) {
-                                            <div class="message-link-desc">{{ preview.description }}</div>
+                                            <div class="message-link-title">
+                                                {{
+                                                preview.title
+                                                }}
+                                            </div>
+                                            @if (
+                                            preview.description
+                                            ) {
+                                            <div class="message-link-desc">
+                                                {{
+                                                preview.description
+                                                }}
+                                            </div>
                                             }
                                         </div>
                                     </a>
@@ -623,13 +1004,28 @@
                                     }
                                 </div>
 
-                                @let otherReactions = getMessageReactions(msg);
-                                @if (!msg.is_deleted && otherReactions.count > 0) {
+                                @let otherReactions =
+                                getMessageReactions(msg);
+                                @if (
+                                !msg.is_deleted &&
+                                otherReactions.count > 0
+                                ) {
                                 <div class="message-reactions other">
-                                    <div class="reaction-chip" (click)="openReactionModal(msg, $event)">
-                                        <span class="reaction-emoji">{{ otherReactions.emoji_char }}</span>
-                                        @if (otherReactions.count > 1) {
-                                        <span class="reaction-count">{{ otherReactions.count }}</span>
+                                    <div class="reaction-chip" (click)="
+                                                                                openReactionModal(
+                                                                                    msg,
+                                                                                    $event
+                                                                                )
+                                                                            ">
+                                        <span class="reaction-emoji">{{
+                                            otherReactions.emoji_char
+                                            }}</span>
+                                        @if (
+                                        otherReactions.count > 1
+                                        ) {
+                                        <span class="reaction-count">{{
+                                            otherReactions.count
+                                            }}</span>
                                         }
                                     </div>
                                 </div>
@@ -640,26 +1036,48 @@
                             <div class="call-bubble-modern">
                                 <div class="call-top-section">
                                     <div class="call-icon-circle">
-                                        <i [className]="getCallIcon(msg.call)"></i>
+                                        <i [className]="
+                                                                            getCallIcon(msg.call)
+                                                                        "></i>
                                     </div>
                                     <div class="call-info-cols">
-                                        <div class="call-title-text">{{ getCallMainContent(msg.call) }}</div>
-                                        <div class="call-sub-text">{{ getCallDescription(msg.call) }}</div>
+                                        <div class="call-title-text">
+                                            {{
+                                            getCallMainContent(msg.call)
+                                            }}
+                                        </div>
+                                        <div class="call-sub-text">
+                                            {{
+                                            getCallDescription(msg.call)
+                                            }}
+                                        </div>
                                     </div>
                                 </div>
-                                <button class="call-action-btn-modern" (click)="handleVoiceCall()">Gọi lại</button>
+                                @if (isCurrentUserActiveMember()) {
+                                <button class="call-action-btn-modern" (click)="handleVoiceCall()">
+                                    Gọi lại
+                                </button>
+                                }
                             </div>
                             }
                         </div>
                     </div>
 
                     <!-- Edited badge -->
-                    @if (msg.is_edited && !msg.is_deleted) {
+                    @if (
+                    msg.is_edited &&
+                    !msg.is_deleted
+                    ) {
                     <div class="edited-badge other">Đã chỉnh sửa</div>
                     }
 
                     <!-- Timestamp -->
-                    @if (isLastOfSenderOrDay(i, getMessagesData().homeMessagesData.messages)) {
+                    @if (
+                    isLastOfSenderOrDay(
+                    i,
+                    getMessagesData().homeMessagesData.messages
+                    )
+                    ) {
                     <div class="msg-timestamp other">
                         {{ formatTime(msg.created_at) }}
                     </div>
@@ -671,8 +1089,10 @@
         }
         }
         }
-    </div><!-- /.messages-inner -->
-</div><!-- /.messages-scroll -->
+    </div>
+    <!-- /.messages-inner -->
+</div>
+<!-- /.messages-scroll -->
 
 <!-- Scroll to bottom button -->
 <button class="scroll-to-bottom" [class.visible]="showScrollToBottom" (click)="scrollToBottomClicked()"
@@ -684,11 +1104,44 @@
 </button>
 
 <!-- ============================================================
-        INPUT AREA
-        ============================================================ -->
-@if (!isBlocked()) {
+            INPUT AREA
+            ============================================================ -->
+@if (isBlocked()) {
+<div class="input-area" style="display: flex; justify-content: center; align-items: center; min-height: 120px;">
+    <div class="blocked-message" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.5rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; width: 100%;">
+        <div class="blocked-icon" style="font-size: 2.5rem; color: var(--text-color); opacity: 0.5; margin-bottom: 0.5rem;">
+            <i class="bi bi-shield-lock-fill"></i>
+        </div>
+        <div class="blocked-text" style="text-align: center;">
+            @if (iBlockedThem()) {
+                <p style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.2rem; color: #fff;">Bạn đã chặn người dùng này</p>
+                <p style="font-size: 0.9rem; opacity: 0.7; margin-bottom: 1rem; color: #cbd5e1;">Bạn sẽ không thể gửi tin nhắn hoặc gọi điện cho họ.</p>
+                <button class="btn btn-sm btn-primary" (click)="unblockCurrentUser()" style="border-radius: 20px; padding: 0.4rem 1.5rem; cursor: pointer; pointer-events: auto; background-color: var(--accent); border-color: var(--accent);">Bỏ chặn</button>
+            } @else if (theyBlockedMe()) {
+                <p style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.2rem; color: #fff;">Người dùng này đã chặn bạn</p>
+                <p style="font-size: 0.9rem; opacity: 0.7; color: #cbd5e1;">Bạn không thể gửi tin nhắn hoặc gọi điện cho họ.</p>
+            }
+        </div>
+    </div>
+</div>
+}
+@else if (!isCurrentUserActiveMember()) {
+<div class="input-area" style="display: flex; justify-content: center; align-items: center; min-height: 120px;">
+    <div class="blocked-message" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.5rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; width: 100%;">
+        <div class="blocked-icon" style="font-size: 2.5rem; color: var(--text-color); opacity: 0.5; margin-bottom: 0.5rem;">
+            <i class="bi bi-door-open-fill"></i>
+        </div>
+        <div class="blocked-text" style="text-align: center;">
+            <p style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.2rem; color: #fff;">Bạn đã rời cuộc trò chuyện này</p>
+            <p style="font-size: 0.9rem; opacity: 0.7; color: #cbd5e1;">Bạn chỉ có thể xem lại lịch sử tin nhắn. Các chức năng nhắn tin và gọi đã bị tắt.</p>
+        </div>
+    </div>
+</div>
+}
+@else {
 <div class="input-area">
-    <!-- Bot Quick Tags (Minimalist like Zalo/Facebook) -->
+
+
 
 
     <!-- Typing indicator -->
@@ -701,9 +1154,10 @@
         </div>
         <span class="typing-text">
             @if (typingUsers().length === 1) {
-            {{ typingUsers()[0].full_name }} đang soạn tin
+            {{ getSenderDisplayName(typingUsers()[0].user_id, typingUsers()[0].full_name) }} đang soạn tin
             } @else if (typingUsers().length === 2) {
-            {{ typingUsers()[0].full_name }} và {{ typingUsers()[1].full_name }} đang soạn tin
+            {{ getSenderDisplayName(typingUsers()[0].user_id, typingUsers()[0].full_name) }} và
+            {{ getSenderDisplayName(typingUsers()[1].user_id, typingUsers()[1].full_name) }} đang soạn tin
             } @else {
             Nhiều người đang soạn tin
             }
@@ -717,8 +1171,8 @@
         <div class="reply-preview-content">
             <div class="reply-preview-to">
                 Đang trả lời
-                <strong>{{ replyToMessage.sender_id === currentUserId() ? 'chính mình' : replyToMessage.sender_name
-                    }}</strong>
+                <strong>{{ replyToMessage.sender_id === currentUserId() ? 'chính mình' :
+                    getSenderDisplayName(replyToMessage.sender_id, replyToMessage.sender_name) }}</strong>
             </div>
             <div class="reply-preview-text">
                 @if (replyToMessage.message_type === 'text') {
@@ -736,8 +1190,11 @@
         </div>
 
         <!-- Preview Thumbnail/Icon (Right side) -->
-        @if (replyToMessage.message_type === 'image' || replyToMessage.message_type === 'video') {
-        <img [src]="replyToMessage.thumbnail_url" class="reply-preview-img">
+        @if (
+        replyToMessage.message_type === 'image' ||
+        replyToMessage.message_type === 'video'
+        ) {
+        <img [src]="replyToMessage.thumbnail_url" class="reply-preview-img" />
         } @else if (replyToMessage.message_type === 'file') {
         <div class="reply-preview-icon-wrap">
             <i class="bi bi-file-earmark-arrow-down"></i>
@@ -761,15 +1218,19 @@
             </button>
             @if (composerPreview.image) {
             <div class="preview-image-wrap">
-                <img [src]="composerPreview.image" alt="Preview Image" referrerPolicy="no-referrer">
+                <img [src]="composerPreview.image" alt="Preview Image" referrerPolicy="no-referrer" />
             </div>
             }
             <div class="preview-content">
                 <div class="preview-title">{{ composerPreview.title }}</div>
                 @if (composerPreview.description) {
-                <div class="preview-description">{{ composerPreview.description }}</div>
+                <div class="preview-description">
+                    {{ composerPreview.description }}
+                </div>
                 }
-                <div class="preview-host">{{ composerPreview.hostname || composerPreview.siteName }}</div>
+                <div class="preview-host">
+                    {{ composerPreview.hostname || composerPreview.siteName }}
+                </div>
             </div>
             } @else {
             <div class="preview-skeleton-image"></div>
@@ -792,7 +1253,7 @@
                 <div class="preview-thumb-wrap">
                     <!-- Image preview -->
                     @if (file.isImage) {
-                    <img [src]="file.previewUrl" class="preview-img">
+                    <img [src]="file.previewUrl" class="preview-img" />
                     }
                     <!-- Video preview -->
                     @if (file.isVideo) {
@@ -831,7 +1292,7 @@
             <button class="input-icon-btn" title="Đính kèm tệp" (click)="handleFileAttachment()">
                 <i class="bi bi-paperclip"></i>
             </button>
-            <input type="file" #fileInput (change)="onFileSelected($event)" multiple style="display: none;">
+            <input type="file" #fileInput (change)="onFileSelected($event)" multiple style="display: none" />
             <button class="input-icon-btn" title="Thu âm" (click)="handleVoiceRecording()">
                 <i class="bi bi-mic"></i>
             </button>
@@ -842,13 +1303,18 @@
             <!-- Mention Suggestions -->
             @if (showMentionList() && mentionParticipants().length > 0) {
             <div class="mention-suggestions">
-                @for (participant of mentionParticipants(); track participant.user_id; let i = $index) {
+                @for (
+                participant of mentionParticipants();
+                track participant.user_id;
+                let i = $index
+                ) {
                 <div class="mention-item" [class.active]="i === mentionSelectedIndex()"
                     (click)="selectMention(participant)">
-                    <img [src]="participant.avatar_url || 'assets/AvatarDefault.jpg'"
-                        class="mention-avatar">
+                    <img [src]="participant.avatar_url || 'assets/AvatarDefault.jpg'" class="mention-avatar">
                     <div class="mention-info">
-                        <span class="mention-name">{{ participant.full_name }}</span>
+                        <span class="mention-name">{{
+                            participant.full_name
+                            }}</span>
                         <span class="mention-email">{{ participant.email }}</span>
                     </div>
                 </div>
@@ -857,8 +1323,7 @@
             }
 
             <div #messageInput class="msg-input-editable" contenteditable="true" (keydown)="handleKeyDown($event)"
-                (input)="onInput($event)" (paste)="handleInputPaste($event)" autofocus>
-            </div>
+                (input)="onInput($event)" (paste)="handleInputPaste($event)" autofocus></div>
             @if (isInputEmpty()) {
             <div class="input-placeholder">Nhập tin nhắn...</div>
             }
@@ -887,16 +1352,7 @@
     </div>
 </div>
 }
-@else {
-<div class="blocked-message">
-    <div class="blocked-icon">
-        <i class="bi bi-lock-fill"></i>
-    </div>
-    <div class="blocked-text">
-        <p>Bạn đã bị chặn bởi người này</p>
-    </div>
-</div>
-}
+
 <!-- Image Viewer Modal Overlay (bounded to messages layout) -->
 @if (isImageViewerOpen) {
 <div class="image-viewer-overlay" (click)="closeImageViewer()">
@@ -928,20 +1384,25 @@
     </button>
     <div class="viewer-content" (pointermove)="onViewerPointerMove($event)" (pointerup)="onViewerPointerUp($event)"
         (pointercancel)="onViewerPointerUp($event)" (pointerleave)="onViewerPointerUp($event)">
-        <img [src]="viewerImageUrl" class="viewer-image" [class.dragging]="isViewerDragging"
-            [style.transform]="'translate(' + viewerPanX + 'px, ' + viewerPanY + 'px) scale(' + viewerZoom + ')'"
-            (pointerdown)="onViewerPointerDown($event)" (click)="$event.stopPropagation()" alt="Full screen preview">
+        <img [src]="viewerImageUrl" class="viewer-image" [class.dragging]="isViewerDragging" [style.transform]="
+                            'translate(' +
+                            viewerPanX +
+                            'px, ' +
+                            viewerPanY +
+                            'px) scale(' +
+                            viewerZoom +
+                            ')'
+                        " (pointerdown)="onViewerPointerDown($event)" (click)="$event.stopPropagation()"
+            alt="Full screen preview" />
     </div>
 
-    <div class="viewer-counter">
-        {{ currentViewerIndex + 1 }} / {{ viewerTotal }}
-    </div>
+    <div class="viewer-counter">{{ currentViewerIndex + 1 }} / {{ viewerTotal }}</div>
 </div>
 }
 
 <!-- ============================================================
-     FORWARD MESSAGE MODAL
-     ============================================================ -->
+        FORWARD MESSAGE MODAL
+        ============================================================ -->
 @if (showForwardModal) {
 <div class="modal-overlay" (click)="closeForwardModal()">
     <div class="modal-card forward-modal" (click)="$event.stopPropagation()">
@@ -971,12 +1432,10 @@
             }
 
             <input class="forward-search-input" type="text" [(ngModel)]="forwardSearch"
-                placeholder="Tìm cuộc hội thoại...">
+                placeholder="Tìm cuộc hội thoại..." />
 
             @if (forwardLoading) {
-            <div class="forward-loading">
-                Đang tải danh sách cuộc hội thoại...
-            </div>
+            <div class="forward-loading">Đang tải danh sách cuộc hội thoại...</div>
             }
 
             @if (forwardError && !forwardLoading) {
@@ -987,19 +1446,27 @@
 
             @if (!forwardLoading) {
             <div class="forward-list">
-                @for (conv of getForwardConversationsFiltered(); track trackByConversationId($index, conv)) {
+                @for (
+                conv of getForwardConversationsFiltered();
+                track trackByConversationId($index, conv)
+                ) {
                 <label class="forward-item">
-                    <input type="checkbox" class="forward-radio"
-                        [checked]="isForwardConversationSelected(conv.conversation_id)"
-                        (change)="toggleForwardConversation(conv.conversation_id, $any($event.target).checked)">
+                    <input type="checkbox" class="forward-radio" [checked]="
+                                                isForwardConversationSelected(conv.conversation_id)
+                                            " (change)="
+                                                toggleForwardConversation(
+                                                    conv.conversation_id,
+                                                    $any($event.target).checked
+                                                )
+                                            " />
 
                     @if (isForwardConversationDirect(conv)) {
                     <img class="forward-avatar" [src]="getForwardDirectAvatar(conv)"
-                        [alt]="getForwardConversationTitle(conv)" referrerPolicy="no-referrer">
+                        [alt]="getForwardConversationTitle(conv)" referrerPolicy="no-referrer" />
                     } @else {
                     @if (hasForwardGroupAvatar(conv)) {
-                    <img class="forward-avatar" [src]="conv.avatar_url" [alt]="getForwardConversationTitle(conv)"
-                        referrerPolicy="no-referrer">
+                    <img class="forward-avatar" [src]="conv.avatar_url || 'assets/AvatarDefault.jpg'" [alt]="getForwardConversationTitle(conv)"
+                        referrerPolicy="no-referrer" />
                     } @else {
                     <div class="forward-avatar-group">
                         <app-group-avatar-layout [members]="conv.participants || []" [isGroup]="true" [avatarUrl]="null"
@@ -1010,8 +1477,12 @@
                     }
 
                     <div class="forward-meta">
-                        <div class="forward-title">{{ getForwardConversationTitle(conv) }}</div>
-                        <div class="forward-sub">{{ getForwardConversationSubtitle(conv) }}</div>
+                        <div class="forward-title">
+                            {{ getForwardConversationTitle(conv) }}
+                        </div>
+                        <div class="forward-sub">
+                            {{ getForwardConversationSubtitle(conv) }}
+                        </div>
                     </div>
                 </label>
                 } @empty {
@@ -1037,8 +1508,8 @@
 }
 
 <!-- ============================================================
-     EDIT MESSAGE MODAL
-     ============================================================ -->
+        EDIT MESSAGE MODAL
+        ============================================================ -->
 @if (editingMessage) {
 <div class="modal-overlay" (click)="closeEditModal()">
     <div class="modal-card" (click)="$event.stopPropagation()">
@@ -1050,7 +1521,7 @@
         </div>
         <div class="modal-card-body">
             <textarea class="modal-textarea" [(ngModel)]="editingContent" rows="4" placeholder="Nhập nội dung...">
-      </textarea>
+                        </textarea>
         </div>
         <div class="modal-card-footer">
             <button class="modal-save-btn" (click)="saveEditModal()">Lưu thay đổi</button>
@@ -1072,14 +1543,15 @@
             @for (reaction of reactionDetails(); track $index) {
             <div class="reaction-detail-item">
                 <div class="user-info-flex">
-                    <img [src]="reaction.user?.avatar_url || 'assets/AvatarDefault.jpg'" [alt]="reaction.user?.full_name"
-                        class="user-avatar-small">
+                    <img [src]="reaction.user?.avatar_url || 'assets/AvatarDefault.jpg'"
+                        [alt]="reaction.user?.full_name" class="user-avatar-small">
                     <span class="user-name-text">{{ reaction.user?.full_name || 'Người dùng' }}</span>
                 </div>
-                <div class="emoji-badge">{{ reaction.emoji_char || reaction.emoji }}</div>
             </div>
             }
         </div>
     </div>
 </div>
 }
+}
+

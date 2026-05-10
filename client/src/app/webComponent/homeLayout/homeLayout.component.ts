@@ -105,7 +105,7 @@ export class HomeLayoutComponent implements OnInit {
         if (isScroll) this.scrollToAuth();
     }
 
-    private scrollToAuth() {
+    protected scrollToAuth() {
         const element = document.getElementById('auth-section');
         if (element) {
             element.scrollIntoView({ behavior: 'smooth', block: 'start' });

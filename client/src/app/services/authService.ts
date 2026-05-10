@@ -59,7 +59,23 @@ export class AuthService {
     async setUserInfo(userId: string) {
         try {
             const { metadata } = await firstValueFrom(this.userService.getUserById(userId));
-            const { id, full_name, avatar_url, role, email, bio, phone_number, birthday, gender, is_email_verified, is_phone_verified, last_online_at, created_at, updated_at, hasPassword } = metadata.userInfor;
+            const {
+                id,
+                full_name,
+                avatar_url,
+                role,
+                email,
+                bio,
+                phone_number,
+                birthday,
+                gender,
+                is_email_verified,
+                is_phone_verified,
+                last_online_at,
+                created_at,
+                updated_at,
+                hasPassword,
+            } = metadata.userInfor;
             this.user.set({
                 id,
                 full_name: full_name,
@@ -75,7 +91,7 @@ export class AuthService {
                 last_online_at,
                 created_at,
                 updated_at,
-                hasPassword
+                hasPassword,
             });
             console.log('Đã setUserInfor: ', { id, full_name, avatar_url, role, email });
         } catch (error) {
@@ -93,42 +109,51 @@ export class AuthService {
     }
 
     updateLocalUser(data: Partial<UserInfor>) {
-        this.user.update(current => ({
+        this.user.update((current) => ({
             ...current,
-            ...data
+            ...data,
         }));
     }
 
     login(payload: LoginPayload): Observable<any> {
         return this.httpClient.post(`${this.apiUrl}/login`, payload).pipe(
             tap((res: any) => {
-                console.log('res', res);
-                const userId = res.metadata?.id;
-                if (userId) {
-                    this.user.set({
-                        id: res.metadata.id,
-                        full_name: res.metadata.full_name,
-                        avatar_url: res.metadata.avatar_url,
-                        role: res.metadata.role,
-                        email: res.metadata.email,
-                        bio: res.metadata.bio,
-                        phone_number: res.metadata.phone_number,
-                        birthday: res.metadata.birthday,
-                        gender: res.metadata.gender,
-                        is_email_verified: res.metadata.is_email_verified,
-                        is_phone_verified: res.metadata.is_phone_verified,
-                        last_online_at: res.metadata.last_online_at,
-                        created_at: res.metadata.created_at,
-                        updated_at: res.metadata.updated_at,
-                        hasPassword: res.metadata.hasPassword
-                    });
-                }
-            })
+                console.log('Login res:', res);
+                this.updateUserStateFromRes(res);
+            }),
         );
     }
 
     signup(payload: SignupPayload): Observable<any> {
-        return this.httpClient.post(`${this.apiUrl}/signup`, payload);
+        return this.httpClient.post(`${this.apiUrl}/signup`, payload).pipe(
+            tap((res: any) => {
+                console.log('Signup res:', res);
+                this.updateUserStateFromRes(res);
+            }),
+        );
+    }
+
+    private updateUserStateFromRes(res: any) {
+        const userData = res.metadata;
+        if (userData && userData.id) {
+            this.user.set({
+                id: userData.id,
+                full_name: userData.full_name,
+                avatar_url: userData.avatar_url,
+                role: userData.role,
+                email: userData.email,
+                bio: userData.bio,
+                phone_number: userData.phone_number,
+                birthday: userData.birthday,
+                gender: userData.gender,
+                is_email_verified: userData.is_email_verified,
+                is_phone_verified: userData.is_phone_verified,
+                last_online_at: userData.last_online_at,
+                created_at: userData.created_at,
+                updated_at: userData.updated_at,
+                hasPassword: userData.hasPassword,
+            });
+        }
     }
 
     requestSignupOTP(email: string): Observable<any> {
@@ -150,14 +175,30 @@ export class AuthService {
     }
 
     logout(): Observable<any> {
-        return this.httpClient.post(`${this.apiUrl}/logout`, {}).pipe(
-            tap(() => this.clearLocalUser())
-        );
+        return this.httpClient
+            .post(`${this.apiUrl}/logout`, {})
+            .pipe(tap(() => this.clearLocalUser()));
     }
 
     // Xóa trạng thái local khi đăng xuất (dùng khi server lỗi)
     clearLocalUser() {
-        this.user.set({ id: '', full_name: '', avatar_url: '', email: '', role: '', bio: '', phone_number: '', birthday: '', gender: '', is_email_verified: false, is_phone_verified: false, last_online_at: '', created_at: '', updated_at: '', hasPassword: false });
+        this.user.set({
+            id: '',
+            full_name: '',
+            avatar_url: '',
+            email: '',
+            role: '',
+            bio: '',
+            phone_number: '',
+            birthday: '',
+            gender: '',
+            is_email_verified: false,
+            is_phone_verified: false,
+            last_online_at: '',
+            created_at: '',
+            updated_at: '',
+            hasPassword: false,
+        });
     }
 
     refreshToken(): Observable<any> {
@@ -180,7 +221,7 @@ export class AuthService {
                         last_online_at: user.last_online_at,
                         created_at: user.created_at,
                         updated_at: user.updated_at,
-                        hasPassword: user.hasPassword
+                        hasPassword: user.hasPassword,
                     });
                     console.log('Refresh success - User set:', user.id);
                 }
@@ -188,10 +229,9 @@ export class AuthService {
             catchError((err) => {
                 this.clearLocalUser();
                 throw err;
-            })
+            }),
         );
     }
-
 
     getMe(): Observable<any> {
         return this.httpClient.get(`${this.rootApiUrl}/home/userinfor/me`).pipe(
@@ -215,16 +255,15 @@ export class AuthService {
                         last_online_at: user.last_online_at,
                         created_at: user.created_at,
                         updated_at: user.updated_at,
-                        hasPassword: user.hasPassword
+                        hasPassword: user.hasPassword,
                     });
                     console.log('GetMe success - User set:', this.user());
                 }
-
             }),
             catchError((err) => {
                 this.clearLocalUser();
                 throw err;
-            })
+            }),
         );
     }
 
@@ -243,30 +282,33 @@ export class AuthService {
         try {
             await firstValueFrom(this.getMe());
         } catch (err) {
-            console.warn('Chưa đăng nhập');
+            console.log('Chưa đăng nhập');
         }
     }
-
 
     googleLogin(): Observable<any> {
         return this.httpClient.get(`${this.apiUrl}/google`);
     }
 
     setPassword(password: string) {
-        return this.httpClient.patch(`${this.rootApiUrl}/home/userinfor/me/password-setup`, { password }).pipe(
-            tap(() => {
-                // Cập nhật state local ngay khi API trả về thành công
-                this.updateLocalUser({ hasPassword: true });
-            })
-        );
+        return this.httpClient
+            .patch(`${this.rootApiUrl}/home/userinfor/me/password-setup`, { password })
+            .pipe(
+                tap(() => {
+                    // Cập nhật state local ngay khi API trả về thành công
+                    this.updateLocalUser({ hasPassword: true });
+                }),
+            );
     }
 
     changePassword(oldPassword: string, newPassword: string) {
-        return this.httpClient.patch(`${this.rootApiUrl}/home/userinfor/me/password-change`,
-            { oldPassword, newPassword })
+        return this.httpClient.patch(`${this.rootApiUrl}/home/userinfor/me/password-change`, {
+            oldPassword,
+            newPassword,
+        });
     }
 
     resetPassword(password: string, email: string): Observable<any> {
-        return this.httpClient.post(`${this.apiUrl}/reset-password`, {password, email});
+        return this.httpClient.post(`${this.apiUrl}/reset-password`, { password, email });
     }
 }

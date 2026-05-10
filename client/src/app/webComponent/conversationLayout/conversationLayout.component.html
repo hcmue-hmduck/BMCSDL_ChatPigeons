@@ -21,6 +21,11 @@
                             [value]="searchTerm()" (input)="onSearch($event)">
                     </div>
                 </div>
+
+                <!-- Create Group Button -->
+                <button class="btn-create-group" (click)="openCreateGroupModal()" *ngIf="!isSearchView()" title="Tạo nhóm mới">
+                    <i class="bi bi-people-fill"></i>
+                </button>
             </div>
         </div>
 
@@ -44,27 +49,23 @@
                             </div>
                             } @else if (conv.type === 'direct' && getOtherParticipant(conv); as other) {
                             <div class="avatar-wrapper">
-                                <img [src]="other.avatar_url" [alt]="other.full_name" class="avatar-img">
-                                @if (other.is_bot) {
-                                    <span class="status-dot online"></span>
-                                }
-                                @else {
+                                <img [src]="other.avatar_url || 'assets/AvatarDefault.jpg'" [alt]="other.full_name" class="avatar-img">
                                     @if (convStore.onlineUsers().has(other.user_id)) {
                                     <span class="status-dot online"></span>
                                     } @else {
                                     <span class="status-dot offline"></span>
                                     }
-                                }
                             </div>
                             }
                         </div>
                         <div class="conv-info">
                             <div class="conv-info-top">
-                                @if (getOtherParticipant(conv)?.is_bot) {
-                                    <span class="conv-name"><i class="bi bi-robot me-1"></i>{{ conv.title }}</span>
-                                } @else {
-                                    <span class="conv-name">{{ conv.title }}</span>
-                                }
+                                    <span class="conv-name">
+                                        @if (isMuted(conv)) {
+                                            <i class="bi bi-bell-slash me-1" style="font-size: 0.9rem;"></i>
+                                        }
+                                        {{ getConversationTitle(conv) }}
+                                    </span>
                                 <div class="conv-time-actions-wrap">
                                     @if (conv.lastMessage) {
                                     <span class="conv-time" [class.hidden]="activeConvMenuId === conv.conversation_id">
@@ -81,6 +82,11 @@
                                                 (click)="pinConversation($event, conv)">
                                                 <i class="bi" [class.bi-pin-angle]="!conv.is_pinned" [class.bi-pin-fill]="conv.is_pinned"></i>
                                                 <span>{{ conv.is_pinned ? 'Bỏ ghim' : 'Ghim hội thoại' }}</span>
+                                            </div>
+                                            <div class="conv-dropdown-item"
+                                                (click)="muteConversation($event, conv)">
+                                                <i class="bi" [class.bi-bell-slash]="isMuted(conv)" [class.bi-bell]="!isMuted(conv)"></i>
+                                                <span>{{ isMuted(conv) ? 'Bật thông báo' : 'Tắt thông báo' }}</span>
                                             </div>
                                         </div>
                                         }
@@ -136,8 +142,8 @@
                             <span class="status-dot" [class.online]="convStore.onlineUsers().has(user.id)"></span>
                         </div>
                         <div class="search-info">
-                            @if (user.is_bot) {
-                            <div class="search-name"><i class="bi bi-robot me-1"></i>{{user.full_name}}</div>
+                            @if (user.is_group) {
+                            <div class="search-name"><i class="bi bi-people-fill me-1"></i>{{user.full_name}}</div>
                             } @else {
                             <div class="search-name">{{user.full_name}}</div>
                             }
@@ -151,7 +157,7 @@
 
     <!-- ===================== PANEL 3: CHAT AREA ===================== -->
     <main class="chat-area" [class.with-sidebar]="convStore.showConversationInfor()">
-        <router-outlet></router-outlet>
+        <router-outlet (activate)="onMessagesLayoutActivate($event)"></router-outlet>
     </main>
 
     <!-- ===================== PANEL 4: INFO SIDEBAR ===================== -->
@@ -161,5 +167,80 @@
         [userPresence]="convStore.userPresence()" [conversationAvatar]="getMessageInfor?.avatar_url"
         [conversationInfor]="convStore.getConversationById(selectedConversationId())">
     </app-conversation-info-layout>
+    }
+    <!-- Create Group Modal -->
+    @if (isCreateGroupModalOpen()) {
+    <div class="modal-overlay" (click)="closeCreateGroupModal()">
+        <div class="modal-card add-member-modal" (click)="$event.stopPropagation()">
+            <div class="modal-card-header">
+                <h3 class="modal-title">Tạo nhóm mới</h3>
+                <button class="modal-close-btn" (click)="closeCreateGroupModal()">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <div class="modal-card-body">
+                <div class="search-box-wrapper">
+                    <i class="bi bi-search search-icon"></i>
+                    <input class="add-member-search-input" type="text" 
+                        [ngModel]="createGroupSearchQuery()"
+                        (ngModelChange)="createGroupSearchQuery.set($event)"
+                        placeholder="Tìm kiếm bạn bè..." [disabled]="isLoadingFriends()">
+                </div>
+
+                @if (createGroupError()) {
+                <div class="add-member-error">
+                    <i class="bi bi-exclamation-circle"></i> {{ createGroupError() }}
+                </div>
+                }
+
+                <div class="friends-selection-list">
+                    @if (isLoadingFriends()) {
+                    <div class="friends-loading-state">
+                        <div class="friends-spinner">
+                            <div class="spinner-ring"></div>
+                        </div>
+                        <p>Đang tải danh sách bạn bè...</p>
+                    </div>
+                    } @else {
+                    @for (friend of filteredFriendsForGroup; track friend.friend_id) {
+                    <label class="friend-select-item" [class.selected]="selectedFriendIds().has(friend.friend_id)">
+                        <div class="friend-select-info">
+                            <img class="friend-select-avatar" [src]="friend.avatar_url || 'assets/AvatarDefault.jpg'"
+                                alt="Avatar">
+                            <div class="friend-select-meta">
+                                <div class="friend-select-name">{{ friend.full_name }}</div>
+                                <div class="friend-select-email">{{ friend.email }}</div>
+                            </div>
+                        </div>
+                        <div class="friend-select-checkbox">
+                            <input type="checkbox" [checked]="selectedFriendIds().has(friend.friend_id)"
+                                (change)="toggleFriendSelectionForGroup(friend.friend_id, $any($event.target).checked)">
+                            <span class="custom-checkbox"></span>
+                        </div>
+                    </label>
+                    } @empty {
+                    <div class="friends-empty-state">
+                        <i class="bi bi-people"></i>
+                        <p>Không tìm thấy bạn bè nào.</p>
+                    </div>
+                    }
+                    }
+                </div>
+            </div>
+
+            <div class="modal-card-footer">
+                <button class="modal-cancel-btn" (click)="closeCreateGroupModal()">Hủy</button>
+                <button class="modal-submit-btn" [disabled]="selectedFriendIds().size < 2 || isCreatingGroup()"
+                    (click)="submitCreateGroup()">
+                    @if (isCreatingGroup()) {
+                    <span class="spinner-border spinner-border-sm me-2"></span> Đang tạo...
+                    } @else {
+                    Tạo nhóm ({{ selectedFriendIds().size }})
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
     }
 </div>

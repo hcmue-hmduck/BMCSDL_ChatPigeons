@@ -6,6 +6,7 @@ const homeConversationController = require('../controllers/homeConversationsCont
 // Conversation routes
 router.get('/:userID', homeConversationController.getHomeConversation);
 router.put('/:convID', homeConversationController.putHomeConversation);
+router.post('/group', homeConversationController.createGroup);
 router.post('/', homeConversationController.createConversation);
 router.get('/name/:convID', homeConversationController.getConversationNameById);
 

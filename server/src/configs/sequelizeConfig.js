@@ -9,7 +9,7 @@ const sequelize = new Sequelize(
     {
         dialect: 'postgres',
         timezone: 'Asia/Ho_Chi_Minh',
-        logging: console.log,  // Bật log SQL queries để debug
+        logging: false,  // Tắt log SQL queries để console sạch hơn
         pool: {
             max: 20,
             min: 0,

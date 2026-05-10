@@ -5,6 +5,10 @@ import { AuthService } from './services/authService';
 import { CallBroadcastService } from './services/callBroadcastService';
 import { CallService } from './services/callService';
 import { IncommingCallLayout } from './webComponent/incommingCallLayout/incommingCallLayout';
+import { CryptoUtilityService } from './services/e2ee/cryptoUtilityService';
+import { LocalDatabaseService } from './services/e2ee/localDatabaseService';
+import { KeyManagementService } from './services/e2ee/keyManagementService';
+import { E2EEMessageService } from './services/e2ee/e2eeMessageService';
 
 @Component({
     selector: 'app-root',
@@ -20,8 +24,13 @@ export class App implements OnInit {
     authService = inject(AuthService);
     platformId = inject(PLATFORM_ID);
 
+    // test service
+    cryptoService = inject(CryptoUtilityService);
+    localDBService = inject(LocalDatabaseService);
+    keyMService = inject(KeyManagementService);
+    e2eeMessageService = inject(E2EEMessageService);
+
     ngOnInit() {
-      
         this.callBroadcastService.listenEvents((event) => {
             console.log(`callBroadcastService.listenEvents:::`, event);
 

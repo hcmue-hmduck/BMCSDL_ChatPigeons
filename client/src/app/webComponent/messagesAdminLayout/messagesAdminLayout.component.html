@@ -1,0 +1,302 @@
+<section class="moderation-shell">
+  <header class="moderation-topbar">
+    <div class="topbar-title-wrap">
+      <div class="title-icon"><i class="bi bi-shield-check-fill"></i></div>
+      <div>
+        <h2>Kiểm duyệt tin nhắn</h2>
+        <p>Message Moderation Queue</p>
+      </div>
+    </div>
+
+    <div class="topbar-actions">
+      <span class="pending-badge">Chưa xử lý: {{ pendingCount() }}</span>
+      <button class="icon-action" title="Thông báo mới">
+        <i class="bi bi-bell-fill"></i>
+        @if (newFlagCount() > 0) {
+        <span class="icon-counter">{{ newFlagCount() }}</span>
+        }
+      </button>
+      <img src="https://i.pravatar.cc/80?img=12" alt="Admin" class="admin-avatar" title="Admin Profile">
+    </div>
+  </header>
+
+  <section class="filter-bar">
+    <div class="filter-item">
+      <label>Loại vi phạm</label>
+      <select [ngModel]="violationFilter()" (ngModelChange)="violationFilter.set($event)">
+        <option value="all">Tất cả</option>
+        <option value="Toxic">Toxic</option>
+        <option value="Spam">Spam</option>
+        <option value="Link">Link</option>
+        <option value="NSFW">NSFW</option>
+        <option value="Thông tin cá nhân">Thông tin cá nhân</option>
+      </select>
+    </div>
+
+    <div class="filter-item">
+      <label>Trạng thái</label>
+      <select [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event)">
+        <option value="all">Tất cả</option>
+        <option value="pending">Chưa xử lý</option>
+        <option value="approved">Đã phê duyệt</option>
+        <option value="blocked">Đã chặn</option>
+      </select>
+    </div>
+
+    <div class="filter-item">
+      <label>Thời gian</label>
+      <div class="range-chip-group">
+        <button class="range-chip" [class.active]="dateRange() === 'today'" (click)="dateRange.set('today')">Hôm
+          nay</button>
+        <button class="range-chip" [class.active]="dateRange() === '7d'" (click)="dateRange.set('7d')">7 ngày
+          qua</button>
+        <button class="range-chip" [class.active]="dateRange() === '30d'" (click)="dateRange.set('30d')">30 ngày
+          qua</button>
+      </div>
+    </div>
+
+    <div class="filter-search">
+      <i class="bi bi-search"></i>
+      <input [ngModel]="searchTerm()" (ngModelChange)="searchTerm.set($event)"
+        placeholder="Tìm theo tên người gửi hoặc nội dung...">
+    </div>
+
+    <button class="reset-filter" type="button" (click)="resetFilters()">Đặt lại bộ lọc</button>
+  </section>
+
+  @if (selectedCount() > 0) {
+  <section class="batch-actions">
+    <span>Đã chọn {{ selectedCount() }} tin nhắn</span>
+    <div class="batch-buttons">
+      <button class="btn-approve" (click)="batchApprove()"><i class="bi bi-check-lg"></i> Phê duyệt đã chọn</button>
+      <button class="btn-block" (click)="batchBlock()"><i class="bi bi-x-lg"></i> Chặn đã chọn</button>
+      <button class="btn-clear" (click)="clearSelection()">Bỏ chọn</button>
+    </div>
+  </section>
+  }
+
+  <section class="table-zone" [class.blur]="detailOpen()">
+    @if (loading()) {
+    <div class="skeleton-table">
+      @for (s of [1,2,3,4,5,6]; track s) {
+      <div class="skeleton-row"></div>
+      }
+    </div>
+    } @else if (error()) {
+    <div class="state-box error-box">
+      <i class="bi bi-exclamation-triangle-fill"></i>
+      <h3>Không thể tải dữ liệu</h3>
+      <p>{{ error() }}</p>
+      <button (click)="retry()">Thử lại</button>
+    </div>
+    } @else if (filteredItems().length === 0) {
+    <div class="state-box empty-box">
+      <i class="bi bi-inbox-fill"></i>
+      <h3>Không có tin nhắn nào cần kiểm duyệt</h3>
+      <button (click)="resetFilters()">Xóa bộ lọc</button>
+    </div>
+    } @else {
+    <div class="table-wrap desktop-only">
+      <table class="moderation-table">
+        <thead>
+          <tr>
+            <th style="width: 40px">
+              <input type="checkbox" [checked]="isAllOnPageSelected()"
+                (change)="toggleSelectAllOnPage($any($event.target).checked)">
+            </th>
+            <th>Trạng thái</th>
+            <th>Người gửi</th>
+            <th>Nội dung tin nhắn</th>
+            <th>Loại vi phạm</th>
+            <th>Điểm AI</th>
+            <th>Thời gian</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (msg of pageItems(); track msg.id; let i = $index) {
+          <tr tabindex="0" (focus)="onRowFocus(i)" (click)="openDetail(msg.id)">
+            <td (click)="$event.stopPropagation()">
+              <input type="checkbox" [checked]="isSelected(msg.id)"
+                (change)="toggleSelect(msg.id, $any($event.target).checked)">
+            </td>
+            <td>
+              <span class="status-badge" [ngClass]="statusClass(msg.status)">
+                <i class="bi"
+                  [ngClass]="msg.status === 'pending' ? 'bi-clock-history' : (msg.status === 'approved' ? 'bi-check-circle-fill' : 'bi-slash-circle-fill')"></i>
+                {{ statusLabel(msg.status) }}
+              </span>
+            </td>
+            <td>
+              <div class="sender-cell">
+                <img [src]="msg.senderAvatar" [alt]="msg.senderName">
+                <span>{{ msg.anonymous ? ('Ẩn danh #' + msg.senderId) : msg.senderName }}</span>
+              </div>
+            </td>
+            <td>
+              <div class="content-cell">
+                <p>{{ msg.content }}</p>
+                <div class="cell-extras">
+                  @if (msg.linkPreview) {
+                  <span class="inline-alert"><i class="bi bi-link-45deg"></i> Link</span>
+                  }
+                  @if (msg.imageThumb) {
+                  <span class="inline-alert"><i class="bi bi-image"></i> Ảnh</span>
+                  }
+                  <i class="bi bi-eye-fill view-more-icon"></i>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div class="violation-wrap">
+                @for (v of msg.violations; track v) {
+                <span class="violation-chip" [ngClass]="'chip-' + v.toLowerCase().replace(' ', '-')">{{ v }}</span>
+                }
+              </div>
+            </td>
+            <td>
+              @if (msg.aiScore !== null) {
+              <div class="confidence-cell">
+                <span [style.color]="confidenceColor(msg.aiScore)">{{ confidenceLabel(msg.aiScore) }}</span>
+                <div class="confidence-track">
+                  <div class="confidence-fill" [style.width.%]="(msg.aiScore || 0) * 100"
+                    [style.background]="confidenceColor(msg.aiScore)"></div>
+                </div>
+              </div>
+              } @else {
+              <span class="manual-tag">Thủ công</span>
+              }
+            </td>
+            <td style="white-space: nowrap">
+              <span [title]="formatFullTime(msg.createdAt)">{{ relativeTime(msg.createdAt) }}</span>
+            </td>
+            <td (click)="$event.stopPropagation()">
+              <div class="quick-actions">
+                <button title="Phê duyệt nhanh" (click)="approveMessage(msg.id)"><i class="bi bi-check-lg"></i></button>
+                <button title="Chặn nhanh" (click)="blockMessage(msg.id)"><i class="bi bi-x-lg"></i></button>
+              </div>
+            </td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="mobile-list mobile-only">
+      @for (msg of pageItems(); track msg.id) {
+      <article class="message-card" (click)="openDetail(msg.id)">
+        <div class="card-top">
+          <span class="status-badge" [ngClass]="statusClass(msg.status)">{{ statusLabel(msg.status) }}</span>
+          <span class="card-time">{{ relativeTime(msg.createdAt) }}</span>
+        </div>
+        <div class="sender-cell">
+          <img [src]="msg.senderAvatar" [alt]="msg.senderName">
+          <span>{{ msg.anonymous ? ('Ẩn danh #' + msg.senderId) : msg.senderName }}</span>
+        </div>
+        <p class="card-content">{{ msg.content }}</p>
+      </article>
+      }
+    </div>
+    }
+  </section>
+
+  @if (!loading() && !error() && filteredItems().length > 0) {
+  <footer class="pagination-row">
+    <button (click)="prevPage()" [disabled]="page() <= 1"><i class="bi bi-chevron-left"></i></button>
+    <span>Trang {{ page() }} / {{ totalPages() }}</span>
+    <button (click)="nextPage()" [disabled]="page() >= totalPages()"><i class="bi bi-chevron-right"></i></button>
+    <div style="display: flex; align-items: center; gap: 0.5rem">
+      <span>Đi tới</span>
+      <input class="page-input" [ngModel]="pageInput()" (ngModelChange)="onPageInputChange($event)"
+        (keyup.enter)="applyPageJump()" aria-label="Nhập trang">
+    </div>
+  </footer>
+  }
+
+  @if (detailOpen() && activeMessage()) {
+  <div class="detail-overlay" (click)="closeDetail()"></div>
+  <aside class="detail-panel" (click)="$event.stopPropagation()">
+    <header class="detail-head">
+      <div>
+        <h3>Chi tiết tin nhắn #{{ activeMessage()!.id }}</h3>
+      </div>
+      <div class="detail-nav">
+        <button (click)="goToSibling(-1)" title="Tin nhắn trước"><i class="bi bi-chevron-left"></i></button>
+        <button (click)="goToSibling(1)" title="Tin nhắn sau"><i class="bi bi-chevron-right"></i></button>
+        <button (click)="closeDetail()" title="Đóng"><i class="bi bi-x-lg"></i></button>
+      </div>
+    </header>
+
+    <div class="detail-sender">
+      <img [src]="activeMessage()!.senderAvatar" [alt]="activeMessage()!.senderName">
+      <div>
+        <strong>{{ activeMessage()!.anonymous ? ('Ẩn danh #' + activeMessage()!.senderId) : activeMessage()!.senderName
+          }}</strong>
+        <p>{{ formatFullTime(activeMessage()!.createdAt) }}</p>
+        <span class="status-badge" [ngClass]="statusClass(activeMessage()!.status)">{{
+          statusLabel(activeMessage()!.status) }}</span>
+      </div>
+    </div>
+
+    <div class="detail-message-box">
+      <p>{{ activeMessage()!.content }}</p>
+      @if (activeMessage()!.imageThumb) {
+      <img [src]="activeMessage()!.imageThumb" alt="Image Content" class="detail-image">
+      }
+      @if (activeMessage()!.linkPreview) {
+      <a [href]="activeMessage()!.linkPreview!.url" target="_blank" rel="noopener noreferrer"
+        class="detail-link-preview">
+        @if (activeMessage()!.linkPreview!.image) {
+        <img [src]="activeMessage()!.linkPreview!.image" alt="Preview">
+        }
+        <div>
+          <strong>{{ activeMessage()!.linkPreview!.title }}</strong>
+          <p>{{ activeMessage()!.linkPreview!.description }}</p>
+          <span>{{ activeMessage()!.linkPreview!.host || activeMessage()!.linkPreview!.url }}</span>
+        </div>
+      </a>
+      }
+    </div>
+
+    <section class="ai-card">
+      <h4><i class="bi bi-cpu-fill"></i> Đánh giá của AI</h4>
+      @for (cat of activeMessage()!.aiCategories; track cat.label) {
+      <div class="ai-row">
+        <div class="ai-row-info">
+          <span>{{ cat.label }}</span>
+          <span>{{ Math.round(cat.value * 100) }}%</span>
+        </div>
+        <div class="ai-track">
+          <div class="ai-fill" [style.width.%]="cat.value * 100" [style.background]="confidenceColor(cat.value)"></div>
+        </div>
+      </div>
+      }
+      <div class="ai-suggest">Đề xuất: <span>{{ activeMessage()!.aiSuggestion }}</span></div>
+    </section>
+
+    <section class="ai-card history-card" style="background: transparent; border-color: rgba(255,255,255,0.1)">
+      <h4 style="color: var(--text-muted); font-size: 1rem"><i class="bi bi-clock-history"></i> Lịch sử hành động</h4>
+      <ul style="margin: 0; padding-left: 1.2rem; font-size: 0.85rem; color: var(--text-muted)">
+        @for (h of activeMessage()!.history; track h.time + h.action) {
+        <li style="margin-bottom: 0.5rem"><strong>{{ h.time }}</strong>: {{ h.action }}</li>
+        }
+      </ul>
+    </section>
+
+    <section class="action-card">
+      <textarea [ngModel]="internalNote()" (ngModelChange)="internalNote.set($event)"
+        placeholder="Ghi chú nội bộ: Lý do phê duyệt/chặn..."></textarea>
+      <div class="panel-actions">
+        <button class="btn-approve" (click)="approveMessage(activeMessage()!.id)"><i class="bi bi-check-lg"></i> Phê
+          duyệt</button>
+        <button class="btn-block" (click)="blockMessage(activeMessage()!.id)"><i class="bi bi-x-lg"></i> Chặn</button>
+        <button class="btn-clear" (click)="deferMessage(activeMessage()!.id)">Bỏ qua</button>
+      </div>
+    </section>
+  </aside>
+  }
+
+  @if (toast()) {
+  <div class="toast-box">{{ toast() }}</div>
+  }
+</section>

@@ -3,15 +3,33 @@ const conversationsService = require('./conversationsService');
 const pinnedmessagesService = require('./pinnedmessagesService');
 const messageReactionService = require('./message_reactionsService');
 const usersService = require('./usersService');
-const participantsService = require('./participantsService.js')
-const { BadRequestError } = require('../core/errorResponse.js');
+const linkpreviewService = require('./linkpreviewService');
+const participantsService = require('./participantsService.js');
+const { BadRequestError, E2EEErrorCode } = require('../core/errorResponse.js');
+
+const e2eeService = require('./E2EEService');
 
 class HomeMessagesService {
-    async getMessagesByConversation(conversationId, limit = 100, offset = 0) {
+    async getMessagesByConversation(conversationId, limit = 100, offset = 0, userId = null) {
+        let leftAt = null;
+        if (userId) {
+            const currentParticipant = await participantsService.getParticipant({
+                conversation_id: conversationId,
+                user_id: userId,
+            });
+            leftAt = currentParticipant?.left_at || null;
+        }
+
         // 1. Song song hóa queries ban đầu
         const [conversation, messages, pinnedMessages] = await Promise.all([
             conversationsService.getConversationById(conversationId),
-            messagesService.getAllMessagesByConversationId(conversationId, limit, offset),
+            messagesService.getAllMessagesByConversationId(
+                conversationId,
+                limit,
+                offset,
+                userId,
+                leftAt,
+            ),
             pinnedmessagesService.getPinnedMessagesByConversationId(conversationId),
         ]);
 
@@ -81,8 +99,16 @@ class HomeMessagesService {
             countReactionMap[mId][r.emoji_char] = (countReactionMap[mId][r.emoji_char] || 0) + 1;
         });
 
+        const visiblePinned = leftAt
+            ? safePinned.filter((pin) => {
+                  const targetMsg = refMessagesMap.get(pin.message_id);
+                  if (!targetMsg?.created_at) return false;
+                  return new Date(targetMsg.created_at).getTime() <= new Date(leftAt).getTime();
+              })
+            : safePinned;
+
         // 6. Map Pinned Messages → plain objects
-        const mappedPinnedMessages = safePinned.map((pin) => {
+        const mappedPinnedMessages = visiblePinned.map((pin) => {
             const pinner = userMap.get(pin.pinned_by);
             const targetMsg = refMessagesMap.get(pin.message_id);
             const sender = targetMsg ? userMap.get(targetMsg.sender_id) : null;
@@ -95,6 +121,10 @@ class HomeMessagesService {
                 sender_name: sender ? sender.full_name : 'Unknown',
                 message_type: targetMsg ? targetMsg.message_type : 'text',
                 file_name: targetMsg ? targetMsg.file_name : null,
+                thumbnail_url: targetMsg ? targetMsg.thumbnail_url : null,
+                is_e2ee: targetMsg ? targetMsg.is_e2ee : false,
+                iv: targetMsg ? targetMsg.iv : null,
+                key_version: targetMsg ? targetMsg.key_version : null,
             };
         });
 
@@ -123,6 +153,9 @@ class HomeMessagesService {
                         parent_message_name: parentSender ? parentSender.full_name : 'Unknown',
                         parent_message_thumbnail_url: parentMsg.thumbnail_url,
                         parent_message_type: parentMsg.message_type,
+                        parent_message_is_e2ee: parentMsg.is_e2ee,
+                        parent_message_iv: parentMsg.iv,
+                        parent_message_key_version: parentMsg.key_version,
                     };
                 }
             }
@@ -139,57 +172,6 @@ class HomeMessagesService {
     }
 
 
-    async getUnreadMessages({ conversation_id, last_read_message_id }) {
-        if (!conversation_id)
-            throw new BadRequestError('params invalid')
-
-        const unreadMessages = await messagesService.getUnreadMessages(
-            { conversation_id, last_read_message_id },
-            {
-                attributes: ['id', 'sender_id', 'message_type', 'content', 'parent_message_id', 'file_name', 'link_description'],
-                raw: true,
-                order: [['created_at', 'ASC']]
-            }
-        )
-
-        if (unreadMessages.length === 0) return null
-
-        const senderIds = Array.from(new Set(unreadMessages.map(m => m.sender_id)))
-
-        const participants = await participantsService.getParticipantByConversationsAndUserIds(
-            conversation_id,
-            senderIds,
-            { attributes: ['user_id', 'nick_name'], raw: true }
-        )
-
-        const participantsMap = participants.reduce((acc, p) => {
-            acc[p.user_id] = p.nick_name
-            return acc
-        }, {})
-
-        const messageIdsMap = {}
-        unreadMessages.forEach((msg, index) => {
-            messageIdsMap[msg.id] = index
-        })
-
-        const updateUnreadMessages = unreadMessages.map(m => {
-            const { id, sender_id, message_type, content, parent_message_id, file_name, link_description } = m
-            const result = {
-                msg_no: messageIdsMap[id],
-                sender: participantsMap[sender_id],
-                type: message_type,
-                content: content,
-            }
-
-            if (file_name) result['file_name'] = file_name
-            if (link_description) result['file_desc'] = link_description
-            if (parent_message_id) result['reply_to'] = messageIdsMap[parent_message_id]
-
-            return result
-        })
-
-        return updateUnreadMessages
-    }
 
     async postMessageToConversation(
         conversationId,
@@ -203,7 +185,10 @@ class HomeMessagesService {
         thumbnail_url = null,
         duration = null,
         link_description = null,
-        has_link = false
+        has_link = false,
+        iv = null,
+        key_version = null,
+        is_e2ee = false,
     ) {
         let resolvedFileUrl = file_url;
         let resolvedFileName = file_name;
@@ -213,8 +198,49 @@ class HomeMessagesService {
         let resolvedLinkDescription = link_description;
         let resolvedHasLink = has_link;
 
-        // Link preview detection removed (linkpreviewService deleted)
-        // has_link flag and link fields must be provided by client if needed
+        // --- KIỂM TRA KEY STATUS (cần xoay key trước khi gửi) ---
+        if (is_e2ee) {
+            const conversation = await conversationsService.getConversationById(conversationId);
+            if (conversation && conversation.key_status === 'require_rotation') {
+                throw new BadRequestError(
+                    'Conversation key requires rotation before sending message',
+                    undefined,
+                    E2EEErrorCode.CONVERSATION_KEY_ROTATION_REQUIRED,
+                );
+            }
+        }
+
+        // --- KIỂM TRA KEY VERSION E2EE ---
+        if (is_e2ee && key_version) {
+            const latestVault = await e2eeService.getLatestConversationKey(senderId, conversationId, false);
+            if (latestVault && latestVault.key_version !== key_version) {
+                throw new BadRequestError(
+                    `Key version mismatch. Client: ${key_version}, Server: ${latestVault.key_version}`,
+                    undefined,
+                    E2EEErrorCode.SERVER_KEY_VERSION_MISMATCH,
+                );
+            }
+        }
+
+        // Tận dụng các cột media hiện có để lưu link preview cho message text
+        if (message_type === 'text' && content) {
+            const detectedUrl = linkpreviewService.extractFirstUrlFromText(content);
+            if (detectedUrl) {
+                resolvedFileUrl = resolvedFileUrl || detectedUrl;
+
+                const needFetchPreview = !resolvedFileName || !resolvedThumbnailUrl || !resolvedLinkDescription;
+                if (needFetchPreview) {
+                    const preview = await linkpreviewService.getLinkPreview(detectedUrl);
+                    resolvedHasLink = true;
+                    if (preview) {
+                        resolvedFileUrl = resolvedFileUrl || preview.url || detectedUrl;
+                        resolvedFileName = resolvedFileName || preview.title || preview.siteName || null;
+                        resolvedThumbnailUrl = resolvedThumbnailUrl || preview.image || null;
+                        resolvedLinkDescription = resolvedLinkDescription || preview.description || null;
+                    }
+                }
+            }
+        }
 
         // 1. Tạo message mới + lấy parent message (song song)
         const [newMessage, parentMessage] = await Promise.all([
@@ -232,6 +258,9 @@ class HomeMessagesService {
                 link_description: resolvedLinkDescription,
                 duration: resolvedDuration,
                 time_sent: new Date(),
+                iv,
+                key_version,
+                is_e2ee,
             }),
             parent_message_id ? messagesService.getMessageById(parent_message_id) : Promise.resolve(null),
         ]);
@@ -258,14 +287,14 @@ class HomeMessagesService {
 
         const parent_message_info = parentMessage
             ? {
-                parent_message_id: parentMessage.id,
-                parent_message_content: parentMessage.content,
-                parent_message_sender_id: parentMessage.sender_id,
-                parent_message_is_deleted: parentMessage.is_deleted,
-                parent_message_name: parentSender ? parentSender.full_name : '',
-                parent_message_type: parentMessage.message_type,
-                parent_message_thumbnail_url: parentMessage.thumbnail_url,
-            }
+                  parent_message_id: parentMessage.id,
+                  parent_message_content: parentMessage.content,
+                  parent_message_sender_id: parentMessage.sender_id,
+                  parent_message_is_deleted: parentMessage.is_deleted,
+                  parent_message_name: parentSender ? parentSender.full_name : '',
+                  parent_message_type: parentMessage.message_type,
+                  parent_message_thumbnail_url: parentMessage.thumbnail_url,
+              }
             : null;
 
         return {

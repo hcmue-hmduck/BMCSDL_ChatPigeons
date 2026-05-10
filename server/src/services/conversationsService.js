@@ -67,6 +67,20 @@ class ConversationsService {
         }
         return false;
     }
+
+    // Cập nhật key_status cho E2EE rotation
+    async updateKeyStatus(conversationId, keyStatus) {
+        const validStatuses = ['no_key', 'active', 'require_rotation'];
+        if (!validStatuses.includes(keyStatus)) throw new Error(`Invalid key_status: ${keyStatus}`);
+
+        const conversation = await conversationsModel.findByPk(conversationId);
+        if (!conversation) return null;
+
+        return await conversation.update({
+            key_status: keyStatus,
+            updated_at: new Date().toISOString(),
+        });
+    }
 }
 
 module.exports = new ConversationsService();

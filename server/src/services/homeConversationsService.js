@@ -2,11 +2,14 @@ const usersService = require('./usersService');
 const participantsService = require('./participantsService');
 const messagesService = require('./messagesService');
 const conversationsService = require('./conversationsService');
+const { BadRequestError } = require('../core/errorResponse');
+const { Op } = require('sequelize');
+const messagesModel = require('../models/messagesModel');
 
 class HomeConversationService {
     // Lấy danh sách conversations của user để hiển thị sidebar
     async getAllUserMessagesInJoinedConversations(userId) {
-        // 1. Lấy tất cả participant record của user
+        // 1. Lấy tất cả participant record của user (bao gồm cả các cuộc hội thoại đã rời)
         const userParticipants = await participantsService.getAllParticipants({ user_id: userId });
         const conversationIds = userParticipants.map((p) => p.conversation_id);
         if (conversationIds.length === 0) return {
@@ -30,7 +33,7 @@ class HomeConversationService {
         const allRelevantMessageIds = [...new Set([...lastMessageIds, ...lastReadMessageIds])];
 
         const [users, allRelevantMessages] = await Promise.all([
-            usersService.getAllUsers({ id: userIds }),
+            usersService.getAllUsers({ id: userIds }, { includeBotsWithoutPublicKey: true }),
             allRelevantMessageIds.length > 0 ? messagesService.getMessagesByIds(allRelevantMessageIds) : Promise.resolve([]),
         ]);
 
@@ -38,6 +41,10 @@ class HomeConversationService {
         const messagesMap = new Map(allRelevantMessages.map((msg) => [msg.id, msg]));
         const usersMap = new Map(users.map((u) => [u.id, u]));
         const conversationsMap = new Map(conversations.map((c) => [c.id, c]));
+
+        const currentUserParticipantMap = new Map(
+            userParticipants.map((p) => [String(p.conversation_id), p]),
+        );
 
         // Chuẩn bị thông tin unread count
         const convReadTimestamps = [];
@@ -98,11 +105,47 @@ class HomeConversationService {
                 if (conv && conv.last_message_id !== p.last_read_message_id) {
                     convReadTimestamps.push({
                         conversation_id: p.conversation_id,
-                        last_read_at: lastReadAt
+                        last_read_at: lastReadAt,
+                        left_at: p.left_at || null,
                     });
                 }
             }
         });
+
+        const leftConversations = conversations.filter((conv) => {
+            const currentParticipant = currentUserParticipantMap.get(String(conv.id));
+            return !!currentParticipant?.left_at;
+        });
+
+        const leftConversationLastMessageMap = new Map();
+        if (leftConversations.length > 0) {
+            const snapshots = await Promise.all(
+                leftConversations.map(async (conv) => {
+                    const currentParticipant = currentUserParticipantMap.get(String(conv.id));
+                    if (!currentParticipant?.left_at) return [String(conv.id), null];
+
+                    const lastVisibleMessage = await messagesModel.findOne({
+                        where: {
+                            conversation_id: conv.id,
+                            created_at: { [Op.lte]: currentParticipant.left_at },
+                        },
+                        include: [
+                            {
+                                association: 'call',
+                                required: false,
+                            },
+                        ],
+                        order: [['created_at', 'DESC']],
+                    });
+
+                    return [String(conv.id), lastVisibleMessage || null];
+                }),
+            );
+
+            snapshots.forEach(([convId, msg]) => {
+                leftConversationLastMessageMap.set(convId, msg);
+            });
+        }
 
         // 5. Batch count unread messages
         const unreadCountsMap = await messagesService.countUnreadMessages(convReadTimestamps);
@@ -152,6 +195,12 @@ class HomeConversationService {
                 title = other ? other.full_name : 'Cuộc trò chuyện';
             }
 
+            const currentParticipant = currentUserParticipantMap.get(String(conv.id));
+            const hasLeft = !!currentParticipant?.left_at;
+            const sidebarLastMessage = hasLeft
+                ? leftConversationLastMessageMap.get(String(conv.id)) || null
+                : messagesMap.get(conv.last_message_id) || null;
+
             return {
                 conversation_id: conv.id,
                 title,
@@ -159,9 +208,10 @@ class HomeConversationService {
                 type: conv.conversation_type,
                 ownerInfo: ownerInfoMap.get(conv.id) || null,
                 participants: convParticipants,
-                lastMessage: messagesMap.get(conv.last_message_id) || null,
-                unread_count: unreadCountsMap[conv.id] || 0,
-                is_pinned: isPinnedMap.get(conv.id) || false
+                lastMessage: sidebarLastMessage,
+                unread_count: hasLeft ? 0 : unreadCountsMap[conv.id] || 0,
+                is_pinned: isPinnedMap.get(conv.id) || false,
+                allow_history_view: conv.allow_history_view
             };
         });
 
@@ -191,7 +241,50 @@ class HomeConversationService {
         const allUserIds = [created_by];
         if (participants_id) allUserIds.push(participants_id);
 
-        const users = await usersService.getAllUsers({ id: allUserIds });
+        const users = await usersService.getAllUsers(
+            { id: allUserIds },
+            { includeBotsWithoutPublicKey: true },
+        );
+        const usersMap = new Map(users.map(u => [String(u.id), u]));
+
+        const enrich = (p) => {
+            const user = usersMap.get(String(p.user_id));
+            return user ? {
+                ...p.toJSON ? p.toJSON() : p,
+                full_name: user.full_name,
+                avatar_url: user.avatar_url,
+                last_online_at: user.last_online_at,
+                is_bot: user.is_bot,
+                bot_name: user.bot_name
+            } : p;
+        };
+
+        return {
+            conv,
+            participants: participants.map(enrich),
+            you: enrich(you)
+        };
+    }
+
+    async createGroup(participants_ids, name, avatar_url, created_by) {
+        if (!participants_ids || !Array.isArray(participants_ids) || participants_ids.length < 2) {
+            throw new BadRequestError('Nhóm phải có ít nhất 3 người (bao gồm cả bạn).');
+        }
+
+        const conv = await conversationsService.createConversation('group', name, avatar_url, created_by);
+
+        const participants = [];
+        for (const user_id of participants_ids) {
+            participants.push(await participantsService.createParticipant(conv.id, { user_id }));
+        }
+
+        const you = await participantsService.createParticipant(conv.id, { user_id: created_by, role: 'owner' });
+
+        const allUserIds = [created_by, ...participants_ids];
+        const users = await usersService.getAllUsers(
+            { id: allUserIds },
+            { includeBotsWithoutPublicKey: true },
+        );
         const usersMap = new Map(users.map(u => [String(u.id), u]));
 
         const enrich = (p) => {

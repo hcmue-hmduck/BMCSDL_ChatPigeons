@@ -13,8 +13,13 @@ export const serverRoutes: ServerRoute[] = [
     path: 'conversations',
     renderMode: RenderMode.Client,
   },
+
   {
     path: 'relationship',
+    renderMode: RenderMode.Client,
+  },
+  {
+    path: 'admin',
     renderMode: RenderMode.Client,
   },
   {

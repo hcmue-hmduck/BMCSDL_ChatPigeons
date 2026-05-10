@@ -128,9 +128,29 @@ io.on('connection', (socket) => {
     });
 
     // User join vào conversation room
-    socket.on('joinConversation', (conversationId) => {
-        socket.join(conversationId);
-        console.log(`Socket ${socket.id} joined conversation ${conversationId}`);
+    socket.on('joinConversation', async (conversationId) => {
+        const userId = socketToUser.get(socket.id);
+        if (!userId) return;
+
+        try {
+            // Kiểm tra xem user có phải là thành viên đang hoạt động trong cuộc hội thoại không
+            const participant = await models.Participant.findOne({
+                where: {
+                    conversation_id: conversationId,
+                    user_id: userId,
+                    left_at: null
+                }
+            });
+
+            if (participant) {
+                socket.join(conversationId);
+                console.log(`Socket ${socket.id} (User ${userId}) joined conversation ${conversationId}`);
+            } else {
+                console.log(`Socket ${socket.id} (User ${userId}) was rejected from conversation ${conversationId} (Not active member)`);
+            }
+        } catch (error) {
+            console.error(`Error checking participant for joinConversation:`, error);
+        }
     });
 
     // Thông báo cho người nhận biết có cuộc trò chuyện mới
@@ -158,22 +178,22 @@ io.on('connection', (socket) => {
 
     // Nhận tin nhắn từ client và broadcast cho người khác
     socket.on('sendMessage', (data) => {
-        console.log('Received sendMessage event on server:', data);
+        // console.log('Received sendMessage event on server:', data);
         io.to(data.conversation_id).emit('newMessage', data);
     });
 
     socket.on('typing', (data) => {
-        console.log('Received typing event on server:', data);
+        // console.log('Received typing event on server:', data);
         socket.to(data.conversation_id).emit('typing', data);
     });
 
     socket.on('stopTyping', (data) => {
-        console.log('Received stopTyping event on server:', data);
+        // console.log('Received stopTyping event on server:', data);
         socket.to(data.conversation_id).emit('stopTyping', data);
     });
 
     socket.on('updateConversation', (data) => {
-        console.log('Received updateConversation event on server:', data);
+        // console.log('Received updateConversation event on server:', data);
         io.to(data.conversation_id).emit('updateConversation', data);
     });
 
@@ -210,15 +230,65 @@ io.on('connection', (socket) => {
     });
 
     socket.on('updateParticipant', (data) => {
-        console.log('Received updateParticipant event on server:', data);
+       // console.log('Received updateParticipant event on server:', data);
         // Broadcast tới tất cả thành viên trong conversation room
-        socket.to(data.conversation_id).emit('updateParticipant', data);
+        io.to(data.conversation_id).emit('updateParticipant', data);
     });
 
     socket.on('addMember', (data) => {
         console.log('Received addMember event on server:', data);
-        // Broadcast tới tất cả trong phòng để cập nhật danh sách thành viên
+        // Broadcast tới tất cả trong phòng để cập nhật danh sách thành viên cho những người đang ở sẵn trong phòng
         io.to(data.conversation_id).emit('addMember', data);
+
+        // Gửi tới riêng những người được thêm vào (vì họ chưa join room conversation_id nên lệnh io.to phía trên sẽ không tới họ)
+        if (data.added_user_ids && Array.isArray(data.added_user_ids)) {
+            data.added_user_ids.forEach(userId => {
+                const userSockets = onlineUsers.get(String(userId));
+                if (userSockets) {
+                    userSockets.forEach(socketId => {
+                        io.to(socketId).emit('addMember', data);
+                    });
+                }
+            });
+        }
+    });
+
+    socket.on('leaveGroup', (data) => {
+        const { conversation_id, user_id } = data;
+        
+        // 1. Thông báo cho tất cả mọi người trong phòng (bao gồm các thiết bị khác của user này)
+        io.to(conversation_id).emit('leaveGroup', data);
+
+        // 2. Tìm tất cả socket của người rời nhóm để cho out khỏi phòng trên server
+        const userSockets = onlineUsers.get(user_id) || onlineUsers.get(Number(user_id)) || onlineUsers.get(String(user_id));
+        if (userSockets) {
+            userSockets.forEach(sId => {
+                const s = io.sockets.sockets.get(sId);
+                if (s) {
+                    s.leave(conversation_id);
+                }
+            });
+        }
+        console.log(`User ${user_id} left group ${conversation_id}`);
+    });
+
+    socket.on('kickMember', (data) => {
+        const { conversation_id, kicked_user_id } = data;
+        
+        // 1. Broadcast cho mọi người trong phòng (bao gồm người bị kick) để họ cập nhật UI
+        io.to(conversation_id).emit('kickMember', data);
+
+        // 2. Sau đó mới tìm tất cả socket của người bị kick để ép rời phòng trên server
+        const userSockets = onlineUsers.get(kicked_user_id) || onlineUsers.get(Number(kicked_user_id)) || onlineUsers.get(String(kicked_user_id));
+        if (userSockets) {
+            userSockets.forEach(sId => {
+                const s = io.sockets.sockets.get(sId);
+                if (s) {
+                    s.leave(conversation_id);
+                    console.log(`Forced socket ${sId} (User ${kicked_user_id}) to leave room ${conversation_id} (Kicked)`);
+                }
+            });
+        }
     });
 
     socket.on('updateFriend', (data) => {
@@ -259,6 +329,51 @@ io.on('connection', (socket) => {
     socket.on('reactionMessage', (data) => {
         console.log('Received reactionMessage event on server:', data);
         socket.to(data.conversation_id).emit('reactionMessage', data);
+    })
+
+    socket.on('newPost', (data) => {
+        console.log('Received newPost event on server:', data);
+        io.emit('newPost', data);
+    })
+
+    socket.on('updatePost', (data) => {
+        console.log('Received updatePost event on server:', data);
+        io.emit('updatePost', data);
+    })
+
+    socket.on('deletePost', (data) => {
+        console.log('Received deletePost event on server:', data);
+        io.emit('deletePost', data);
+    })
+
+    socket.on('newComment', (data) => {
+        console.log('Received newComment event on server:', data);
+        io.emit('newComment', data);
+    })
+
+    socket.on('deleteComment', (data) => {
+        console.log('Received deleteComment event on server:', data);
+        io.emit('deleteComment', data);
+    })
+
+    socket.on('deleteReply', (data) => {
+        console.log('Received deleteReply event on server:', data);
+        io.emit('deleteReply', data);
+    })
+
+    socket.on('newReaction', (data) => {
+        console.log('Received newReaction event on server:', data);
+        io.emit('newReaction', data);
+    })
+
+    socket.on('deleteReaction', (data) => {
+        console.log('Received deleteReaction event on server:', data);
+        io.emit('deleteReaction', data);
+    })
+
+    socket.on('PostReact', (data) => {
+        console.log('Received PostReact event on server:', data);
+        io.emit('PostReact', data);
     })
 
     socket.on('updateConversationInfo', (data) => {
@@ -377,6 +492,7 @@ app.use((error, req, res, next) => {
     res.status(error.status || 500).json({
         message: error.message || 'Internal Server Error',
         code: error.code || 'INTERNAL_ERROR',
+        errorCode: error.errorCode || ''
     });
 });
 

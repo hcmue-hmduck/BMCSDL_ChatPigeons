@@ -152,13 +152,14 @@
                     <button class="btn-disabled-glass" disabled>
                       <i class="bi bi-clock-history"></i>
                       Đã gửi yêu cầu
-                    </button>
-                    } @else {
+                    </button>}
+                    @else if (!user.is_bot) {
                     <button class="btn-primary-neon" (click)="sendFriendRequest(user.id)">
                       <i class="bi bi-person-plus-fill"></i>
                       Thêm bạn bè
                     </button>
                     }
+                    
 
                     <button (click)="sendMessage(user)" class="btn-secondary-glass">
                       <i class="bi bi-chat-dots"></i>
@@ -361,10 +362,6 @@
             <span class="stat-dot-gray"></span>
             <span>TỔNG CỘNG: {{ relStore.friends().length + relStore.blockedUser().length }}</span>
           </div>
-        </div>
-        <div class="encryption-status">
-          <i class="bi bi-shield-check"></i>
-          KẾT NỐI ĐƯỢC MÃ HÓA
         </div>
       </footer>
     </div>

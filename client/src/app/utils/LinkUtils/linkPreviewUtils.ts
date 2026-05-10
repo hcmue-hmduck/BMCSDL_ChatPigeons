@@ -32,6 +32,9 @@ export class LinkPreviewUtils {
     formatMessageText(content: string | null | undefined, participants?: any[]): string {
         if (!content) return '';
 
+        // Dùng Regex để nhận diện tin nhắn hệ thống (ví dụ: đã ghim, đã rời nhóm, đã thêm, đã xóa, đã đổi, đã cập nhật)
+        const isSystemMessage = /đã (ghim|bỏ ghim|rời nhóm|thêm|xóa|đổi|cập nhật)/.test(content);
+
         const escaped = this.escapeHtml(content);
         const urlPattern = /((?:https?:\/\/|www\.)[^\s<]+)/gi;
 
@@ -51,10 +54,24 @@ export class LinkPreviewUtils {
         linked = linked.replace(mentionPattern, (match, userId) => {
             const participant = participants?.find(p => p.user_id === userId);
             const name = participant ? participant.full_name : 'người dùng';
-            return `<span class="mention-tag">@${name}</span>`;
+            return `<span class="mention-tag">${name}</span>`;
         });
 
-        return linked.replace(/\n/g, '<br>');
+        const unescaped = linked
+            .replace(/&lt;i class=&quot;bi bi-paperclip me-1&quot;&gt;&lt;\/i&gt;/g, '<i class="bi bi-paperclip me-1"></i>')
+            .replace(/&lt;i class=&quot;bi bi-image me-1&quot;&gt;&lt;\/i&gt;/g, '<i class="bi bi-image me-1"></i>')
+            .replace(/&lt;i class=&quot;bi bi-camera-video me-1&quot;&gt;&lt;\/i&gt;/g, '<i class="bi bi-camera-video me-1"></i>')
+            .replace(/&lt;i class=&quot;bi bi-telephone me-1&quot;&gt;&lt;\/i&gt;/g, '<i class="bi bi-telephone me-1"></i>')
+            .replace(/&lt;i class=&quot;bi bi-person-plus&quot;&gt;&lt;\/i&gt;/g, '<i class="bi bi-person-plus"></i>')
+            .replace(/&lt;i class=&quot;bi bi-box-arrow-right&quot;&gt;&lt;\/i&gt;/g, '<i class="bi bi-box-arrow-right"></i>')
+            .replace(/&lt;i class=&quot;bi bi-person-x&quot;&gt;&lt;\/i&gt;/g, '<i class="bi bi-person-x"></i>');
+
+        const lineBreak = isSystemMessage ? ' ' : '<br>';
+        let result = unescaped.replace(/\r?\n/g, lineBreak);
+        if (isSystemMessage) {
+            result = result.replace(/<br\s*\/?>/gi, ' ');
+        }
+        return result;
     }
 
     extractFirstUrl(content: string | null | undefined): string | null {

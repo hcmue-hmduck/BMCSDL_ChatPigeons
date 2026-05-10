@@ -41,6 +41,24 @@ class HomeConversationController {
         }).send(res);
     }
 
+    async createGroup(req, res, next) {
+        try {
+            const { participants_ids, name, avatar_url } = req.body;
+            const { id: created_by } = req.user;
+            
+            const newConversation = await homeConversationsService.createGroup(participants_ids, name, avatar_url, created_by);
+            
+            return new SuccessResponse({
+                message: 'Create group successfully',
+                metadata: {
+                    newConversation: newConversation,
+                },
+            }).send(res);
+        } catch (error) {
+            next(error);
+        }
+    }
+
     async getConversationNameById(req, res) {
         const conversationId = req.params.convID;
         const groupName = await homeConversationsService.getConversationNameById(conversationId);

@@ -117,7 +117,7 @@ export class LivekitCallService {
                             conversationId: this.callState.conversationId,
                             callId: this.callState.callId,
                             inviterId: id,
-                            inviterName: name,
+                            inviterName: full_name,
                             inviterAvatarUrl: avatar_url,
                             initializeVideo: this.callState.isCameraOn(),
                         });

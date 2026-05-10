@@ -21,4 +21,12 @@ export class Participant {
     postParticipant(participantData: any): Observable<any> {
         return this.http.post(`${this.apiUrl}/${participantData.conversation_id}`, participantData);
     }
+
+    leaveConversation(conversationId: string): Observable<any> {
+        return this.http.post(`${this.apiUrl}/leave/${conversationId}`, {});
+    }
+
+    kickMember(conversationId: string, targetUserId: string): Observable<any> {
+        return this.http.post(`${this.apiUrl}/kick/${conversationId}`, { target_user_id: targetUserId });
+    }
 }

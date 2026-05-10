@@ -28,7 +28,8 @@
             "tsConfig": "tsconfig.app.json",
             "assets": [
               "src/assets",
-              "public/favicon.ico"
+              "public/favicon.ico",
+              "src/OneSignalSDKWorker.js" 
             ],
             "styles": [
               "src/styles.css"

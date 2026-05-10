@@ -17,7 +17,7 @@ import {
 } from '@angular/core';
 import { ActiveConversationService } from '../../services/activeConversation.service';
 import { RouterOutlet, Router, ActivatedRoute, NavigationEnd } from '@angular/router';
-import { Subject, of } from 'rxjs';
+import { Subject, of, forkJoin } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap, filter, takeUntil } from 'rxjs/operators';
 import { NavigationService, DirectConversationTarget } from '../../services/navigation';
 import { Conversation } from '../../services/conversation';
@@ -31,11 +31,13 @@ import { DateTimeUtils } from '../../utils/DateTimeUtils/datetimeUtils';
 import { FileUtils } from '../../utils/FileUtils/fileUltils';
 import { ConversationInfoLayoutComponent } from '../conversationInforLayout/conversationInforLayout.component';
 import { GroupAvatarLayoutComponent } from '../groupAvatarLayout/groupAvatarLayout.component';
+import { FormsModule } from '@angular/forms';
+import { Friend } from '../../services/friend';
 
 @Component({
     selector: 'conversation-layout',
     standalone: true,
-    imports: [CommonModule, RouterOutlet, ConversationInfoLayoutComponent, GroupAvatarLayoutComponent],
+    imports: [CommonModule, RouterOutlet, ConversationInfoLayoutComponent, GroupAvatarLayoutComponent, FormsModule],
     templateUrl: './conversationLayout.component.html',
     styleUrls: ['./conversationLayout.component.css'],
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -85,9 +87,6 @@ export class ConversationLayoutComponent implements OnInit, OnDestroy {
     selectedConversationType = '';
     getMessageInfor: any = {};
     isFirstConversationReady = signal(false);
-    aiSummaryTriggerUnreadCount = 0;
-    aiSummaryTriggerLastReadMessageId = '';
-    aiSummaryTriggerKey = 0;
 
     // Search state
     searchTerm = signal('');
@@ -96,13 +95,29 @@ export class ConversationLayoutComponent implements OnInit, OnDestroy {
     isSearchView = signal(false);
     private searchSubject = new Subject<string>();
 
+    // Create Group State
+    friendService = inject(Friend);
+    isCreateGroupModalOpen = signal(false);
+    isLoadingFriends = signal(false);
+    friends = signal<any[]>([]);
+    selectedFriendIds = signal<Set<string>>(new Set());
+    createGroupSearchQuery = signal('');
+    createGroupError = signal('');
+    isCreatingGroup = signal(false);
+
     private onUpdateParticipantSocket?: (data: any) => void;
     private onAddMemberSocket?: (data: any) => void;
 
     private readUpdateInFlightByConversation = new Map<string, boolean>();
     private pendingReadMessageIdByConversation = new Map<string, string>();
-    private hasInitWelcomeResetEffect = false;
-    private aiSummaryTriggerRequestToken = 0;
+    private activeMessagesLayout?: {
+        applySummaryTrigger: (unreadCount: number, lastReadMessageId: string) => void;
+    };
+    private pendingSummaryTrigger?: {
+        conversationId: string;
+        unreadCount: number;
+        lastReadMessageId: string;
+    };
     activeConvMenuId: string | null = null;
     private destroy$ = new Subject<void>();
 
@@ -150,15 +165,6 @@ export class ConversationLayoutComponent implements OnInit, OnDestroy {
             this.navService.pendingDirectConversationUser.set(null);
         });
 
-        effect(() => {
-            const resetTick = this.navService.messagesWelcomeResetTick();
-            if (!this.hasInitWelcomeResetEffect) {
-                this.hasInitWelcomeResetEffect = true;
-                return;
-            }
-            if (resetTick < 1) return;
-            this.resetToWelcome();
-        });
 
         // Optimization: Đã xóa loadConversations effect ở đây vì ActiveConversationService 
         // là một Singleton đã tự động handle việc load data dựa trên userId.
@@ -174,7 +180,7 @@ export class ConversationLayoutComponent implements OnInit, OnDestroy {
             
             // Nếu có ID từ URL và chưa chọn đúng hội thoại ở sidebar, đồng bộ selection
             if (routeId && routeId !== currentSelectedId) {
-                console.log('Syncing selection after full data load:', routeId);
+                // console.log('Syncing selection after full data load:', routeId);
                 this.syncSelectionWithRoute();
             }
         });
@@ -289,7 +295,13 @@ export class ConversationLayoutComponent implements OnInit, OnDestroy {
     handleConversationID(conv: any) {
         // this.socketService.off('newMessage');
         const unreadCountOnClick = Number(conv?.unread_count || 0);
-        this.triggerAiSummarySuggestion(conv, unreadCountOnClick);
+        const localLastReadMessageId = this.getLastReadMessageIdFromConversation(conv);
+        this.pendingSummaryTrigger = {
+            conversationId: String(conv?.conversation_id || ''),
+            unreadCount: unreadCountOnClick,
+            lastReadMessageId: localLastReadMessageId,
+        };
+        this.dispatchSummaryTrigger();
 
         this.selectedConversationId.set(conv.conversation_id);
         this.convStore.setActiveConversationId(conv.conversation_id);
@@ -336,46 +348,6 @@ export class ConversationLayoutComponent implements OnInit, OnDestroy {
         }
     }
 
-    private triggerAiSummarySuggestion(conv: any, unreadCount: number) {
-        const localLastReadMessageId = this.getLastReadMessageIdFromConversation(conv);
-
-        if (unreadCount < 10) {
-            this.setAiSummaryTrigger(unreadCount, localLastReadMessageId);
-            return;
-        }
-
-        // Clear previous popup state while waiting for fresh last_read_message_id from API.
-        this.setAiSummaryTrigger(0, '');
-
-        const conversationId = conv?.conversation_id ? String(conv.conversation_id) : '';
-        const userId = String(this.currentUserId() || '').trim();
-        if (!conversationId || !userId) {
-            this.setAiSummaryTrigger(unreadCount, localLastReadMessageId);
-            return;
-        }
-
-        const requestToken = ++this.aiSummaryTriggerRequestToken;
-        this.participantService.getLastReadMessageByConversationAndUser(conversationId, userId).subscribe({
-            next: (response: any) => {
-                if (requestToken !== this.aiSummaryTriggerRequestToken) return;
-
-                const lastReadFromApi = response?.metadata?.last_read_message_id
-                    ? String(response.metadata.last_read_message_id)
-                    : '';
-
-                this.setAiSummaryTrigger(unreadCount, lastReadFromApi || localLastReadMessageId);
-                this.cdr.markForCheck();
-            },
-            error: (error) => {
-                if (requestToken !== this.aiSummaryTriggerRequestToken) return;
-
-                console.error('Error fetching last read message id for summary trigger:', error);
-                this.setAiSummaryTrigger(unreadCount, localLastReadMessageId);
-                this.cdr.markForCheck();
-            }
-        });
-    }
-
     private getLastReadMessageIdFromConversation(conv: any): string {
         const currentParticipant = conv?.participants?.find((p: any) => p.user_id === this.currentUserId());
         const participantLastReadMessageId = currentParticipant?.last_read_message_id
@@ -388,10 +360,25 @@ export class ConversationLayoutComponent implements OnInit, OnDestroy {
         return participantLastReadMessageId || conversationLastReadMessageId;
     }
 
-    private setAiSummaryTrigger(unreadCount: number, lastReadMessageId: string) {
-        this.aiSummaryTriggerUnreadCount = unreadCount;
-        this.aiSummaryTriggerLastReadMessageId = lastReadMessageId;
-        this.aiSummaryTriggerKey += 1;
+    onMessagesLayoutActivate(component: any) {
+        if (component && typeof component.applySummaryTrigger === 'function') {
+            this.activeMessagesLayout = component;
+            this.dispatchSummaryTrigger();
+        }
+    }
+
+    private dispatchSummaryTrigger() {
+        if (!this.pendingSummaryTrigger || !this.activeMessagesLayout) return;
+        if (
+            this.pendingSummaryTrigger.conversationId &&
+            this.pendingSummaryTrigger.conversationId !== String(this.selectedConversationId())
+        ) {
+            return;
+        }
+        this.activeMessagesLayout.applySummaryTrigger(
+            this.pendingSummaryTrigger.unreadCount,
+            this.pendingSummaryTrigger.lastReadMessageId,
+        );
     }
 
     private queueParticipantReadUpdate(conversationId: string, participantId: string, lastReadMessageId: string) {
@@ -445,6 +432,105 @@ export class ConversationLayoutComponent implements OnInit, OnDestroy {
 
     createConversation() {
         this.navService.openFriendsSuggestions();
+    }
+
+    openCreateGroupModal() {
+        if (!this.currentUserId()) return;
+        this.createGroupError.set('');
+        this.selectedFriendIds().clear();
+        this.createGroupSearchQuery.set('');
+        this.isCreateGroupModalOpen.set(true);
+        this.loadFriendsForGroup();
+    }
+
+    closeCreateGroupModal() {
+        this.isCreateGroupModalOpen.set(false);
+        this.selectedFriendIds().clear();
+        this.createGroupSearchQuery.set('');
+        this.createGroupError.set('');
+    }
+
+    loadFriendsForGroup() {
+        const uid = this.currentUserId();
+        if (!uid) return;
+        this.isLoadingFriends.set(true);
+        this.friendService.getFriendByUserId(uid).subscribe({
+            next: (res: any) => {
+                const rawFriends = res?.metadata?.friends || [];
+                this.friends.set(rawFriends.map((f: any) => ({
+                    ...f,
+                    full_name: f.friend?.full_name || f.full_name || 'Người dùng',
+                    avatar_url: f.friend?.avatar_url || f.avatar_url || 'assets/AvatarDefault.jpg',
+                    email: f.friend?.email || f.email || '',
+                    friend_id: f.friend_id || f.id
+                })));
+                this.isLoadingFriends.set(false);
+                this.cdr.detectChanges();
+            },
+            error: (err) => {
+                this.isLoadingFriends.set(false);
+                this.createGroupError.set('Không thể tải danh sách bạn bè.');
+                this.cdr.detectChanges();
+            }
+        });
+    }
+
+    toggleFriendSelectionForGroup(friendId: string, checked: boolean) {
+        const selected = this.selectedFriendIds();
+        if (checked) {
+            selected.add(friendId);
+        } else {
+            selected.delete(friendId);
+        }
+        this.selectedFriendIds.set(new Set(selected));
+    }
+
+    get filteredFriendsForGroup() {
+        const friendsList = this.friends();
+        const query = this.createGroupSearchQuery().toLowerCase().trim();
+        if (!query) return friendsList;
+        return friendsList.filter(f =>
+            f.full_name?.toLowerCase().includes(query) ||
+            f.email?.toLowerCase().includes(query)
+        );
+    }
+
+    submitCreateGroup() {
+        const selectedIds = Array.from(this.selectedFriendIds());
+        if (selectedIds.length < 2) {
+            this.createGroupError.set('Bạn phải chọn ít nhất 2 người.');
+            return;
+        }
+
+        this.isCreatingGroup.set(true);
+        this.createGroupError.set('');
+
+        const selectedFriends = this.friends().filter(f => selectedIds.includes(f.friend_id));
+        const names = selectedFriends.map(f => f.full_name);
+        const groupName = names.join(', ');
+
+        this.conversationService.createGroup(selectedIds, groupName).subscribe({
+            next: (res: any) => {
+                this.isCreatingGroup.set(false);
+                const newConv = res.metadata?.newConversation;
+                if (newConv && newConv.conv) {
+                    this.socketService.emit('notifyNewConversation', {
+                        receiverIds: [...selectedIds, this.currentUserId()],
+                        conversationId: newConv.conv.id,
+                        conversation_id: newConv.conv.id, // Thêm cho đúng với ActiveConversationService
+                    });
+                    
+                    this.socketService.emit('joinConversation', newConv.conv.id);
+                    
+                    this.router.navigate(['/home/conversation', newConv.conv.id]);
+                }
+                this.closeCreateGroupModal();
+            },
+            error: (err) => {
+                this.isCreatingGroup.set(false);
+                this.createGroupError.set('Gặp lỗi khi tạo nhóm. Vui lòng thử lại.');
+            }
+        });
     }
 
     private resetToWelcome() {
@@ -551,33 +637,52 @@ export class ConversationLayoutComponent implements OnInit, OnDestroy {
         const { lastMessage, participants } = conv ?? {};
         if (!lastMessage) return '';
         const isSystem = lastMessage.message_type === 'system';
+        
+        // Nếu là tin nhắn hệ thống và đã có tag @[user_id] trong nội dung thì không cần hiện tên người gửi nữa
+        if (isSystem && (lastMessage.content || '').includes('@[')) {
+            return '';
+        }
+
         const isCurrentUser = lastMessage.sender_id === this.currentUserId();
         const isDirectChat = participants.length < 3;
         if (isDirectChat && !isCurrentUser) {
             if (!isSystem) return '';
             const sender = participants.find((p: any) => p.user_id === lastMessage.sender_id);
-            return sender?.full_name ?? 'Ai đó';
+            return sender?.nick_name || sender?.full_name || 'Ai đó';
         }
         if (isCurrentUser) return isSystem ? 'Bạn' : 'Bạn:';
         const sender = participants.find((p: any) => p.user_id === lastMessage.sender_id);
-        const name = sender?.full_name ?? 'Ai đó';
+        const name = sender?.nick_name || sender?.full_name || 'Ai đó';
         return isSystem ? name : `${name}:`;
+    }
+
+    getConversationTitle(conv: any): string {
+        if (!conv) return '';
+        if (conv.type === 'direct') {
+            const other = this.getOtherParticipant(conv);
+            return other?.nick_name || other?.full_name || conv.title;
+        }
+        return conv.title;
     }
 
     formatMessageText(content: string | null | undefined, participants?: any[], isHtml: boolean = false): string {
         if (!content) return '';
 
+        // Thay thế @[currentUserId] bằng "Bạn"
+        const currentUserId = this.currentUserId();
+        const replacedContent = content.replace(new RegExp(`@\\[${currentUserId}\\]`, 'g'), 'Bạn');
+
         // Nếu content chứa HTML (bot message, system message...) → strip tags, collapse whitespace
-        if (isHtml || /<[a-z][\s\S]*>/i.test(content)) {
-            const stripped = content
+        if (isHtml || /<[a-z][\s\S]*>/i.test(replacedContent)) {
+            const stripped = replacedContent
                 .replace(/<[^>]+>/g, ' ')   // bỏ tất cả HTML tags
                 .replace(/\s+/g, ' ')        // collapse whitespace/newlines thành 1 khoảng trắng
                 .trim();
-            return stripped;
+            return this.linkPreviewUtils.formatMessageText(stripped, participants || []);
         }
 
         // Plain text: collapse newlines thành space cho sidebar preview
-        const singleLineContent = content.replace(/\n/g, ' ');
+        const singleLineContent = replacedContent.replace(/\n/g, ' ');
         return this.linkPreviewUtils.formatMessageText(singleLineContent, participants || []);
     }
 
@@ -609,11 +714,15 @@ export class ConversationLayoutComponent implements OnInit, OnDestroy {
         this.cdr.markForCheck();
     }
 
-    selectSearchResult(user: any) {
+    selectSearchResult(item: any) {
         // Clear search
         this.exitSearch();
 
-        this.openDirectConversationWithUser(user);
+        if (item.is_group) {
+            this.router.navigate(['/home/conversation', item.id]);
+        } else {
+            this.openDirectConversationWithUser(item);
+        }
     }
 
     private openDirectConversationWithUser(user: DirectConversationTarget) {
@@ -627,6 +736,7 @@ export class ConversationLayoutComponent implements OnInit, OnDestroy {
 
         if (existingConv) {
             this.handleConversationID(existingConv);
+            this.router.navigate(['/conversations', existingConv.conversation_id]);
         } else {
             const randomId1 = Math.random().toString(36).substring(2, 10);
             const randomId2 = Math.random().toString(36).substring(2, 10);
@@ -669,6 +779,7 @@ export class ConversationLayoutComponent implements OnInit, OnDestroy {
                 };
             });
             this.handleConversationID(newConv);
+            this.router.navigate(['/conversations', newConv.conversation_id]);
         }
     }
 
@@ -701,6 +812,51 @@ export class ConversationLayoutComponent implements OnInit, OnDestroy {
             },
             error: () => {
                 console.log('Failed to update conversation status');
+            }
+        });
+    }
+
+    isMuted(conv: any): boolean {
+        const me = conv?.participants?.find((p: any) => String(p.user_id) === String(this.currentUserId()));
+        // console.log('[isMuted] conv:', conv?.conversation_id, 'me:', me?.user_id, 'is_muted:', me?.is_muted);
+        return me?.is_muted === true || me?.is_muted === 1 || me?.is_muted === '1';
+    }
+
+    muteConversation(event: MouseEvent, conv: any) {
+        event.stopPropagation();
+        const currentParticipant = conv.participants?.find((p: any) => String(p.user_id) === String(this.currentUserId()));
+        if (!currentParticipant?.id) {
+            console.error('Participant ID not found for current user');
+            return;
+        }
+        const newMutedStatus = !currentParticipant.is_muted;
+        this.activeConvMenuId = null;
+        
+        this.participantService.putParticipant({ id: currentParticipant.id, is_muted: newMutedStatus }).subscribe({
+            next: () => {
+                this.convStore.conversations.update(cur => {
+                    if (!cur?.homeConversationData?.joinedConversations) return cur;
+                    const updated = cur.homeConversationData.joinedConversations.map((c: any) => {
+                        if (String(c.conversation_id) === String(conv.conversation_id)) {
+                            const updatedParticipants = c.participants?.map((p: any) => {
+                                if (String(p.user_id) === String(this.currentUserId())) {
+                                    return { ...p, is_muted: newMutedStatus };
+                                }
+                                return p;
+                            });
+                            return { ...c, participants: updatedParticipants };
+                        }
+                        return c;
+                    });
+                    return {
+                        ...cur,
+                        homeConversationData: { ...cur.homeConversationData, joinedConversations: updated }
+                    };
+                });
+                console.log('Conversation mute status updated successfully');
+            },
+            error: (err) => {
+                console.error('Failed to update mute status:', err);
             }
         });
     }

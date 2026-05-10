@@ -1,0 +1,70 @@
+<div class="user-admin-container">
+    <h1 class="user-admin-title">User Administration</h1>
+    <p class="user-count">Total users: {{ users().length }}</p>
+
+    <!-- Loading state -->
+    @if (loading) {
+    <div class="user-loading">
+        <i class="bi bi-arrow-repeat"></i>
+        <p>Synchronizing user data...</p>
+    </div>
+    }
+
+    <!-- Error state -->
+    @if (error) {
+    <div class="user-error">
+        <i class="bi bi-exclamation-triangle"></i>
+        <p>Telemetry Error: {{ error }}</p>
+    </div>
+    }
+
+    <!-- Users list -->
+    @if (!loading && !error) {
+    <div class="table-panel">
+        <table class="user-admin-table">
+            <thead>
+                <tr>
+                    <th style="width: 80px; text-align: center;">Avatar</th>
+                    <th>Full Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Status</th>
+                    <th>Role</th>
+                    <th>Birthday</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (user of users(); track user.id) {
+                <tr>
+                    <td style="text-align: center;">
+                        <img [src]="user.avatar_url" alt="avatar" class="user-avatar">
+                    </td>
+                    <td>{{ user.full_name }}</td>
+                    <td>{{ user.email }}</td>
+                    <td class="text-slate-500">{{ user.phone_number }}</td>
+                    <td>
+                        <div class="status-pill" [ngClass]="user.status === 'online' ? 'user-status-online' : 'user-status-offline'">
+                            {{ user.status }}
+                        </div>
+                    </td>
+                    <td>
+                        <span class="user-role">{{ user.role }}</span>
+                    </td>
+                    <td>
+                        <span class="user-role">{{ user.birthday }}</span>
+                    </td>
+                </tr>
+                }
+            </tbody>
+        </table>
+
+        <!-- No users message -->
+        @if (users().length === 0) {
+        <div class="user-empty">
+            <i class="bi bi-search"></i>
+            <p>No user records found in current node.</p>
+        </div>
+        }
+    </div>
+    }
+</div>

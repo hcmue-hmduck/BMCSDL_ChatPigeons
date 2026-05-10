@@ -2,7 +2,7 @@
 -- SCHEMA: ChatPigeons
 -- =====================================================
 
-CREATE SCHEMA IF NOT EXISTS "ChatPigeons"
+CREATE SCHEMA IF NOT EXISTS "ChatPigeons";
     AUTHORIZATION neondb_owner;
 
 ALTER DATABASE postgres SET search_path TO "ChatPigeons", public;
@@ -30,10 +30,21 @@ CREATE TABLE Users (
     is_email_verified BOOLEAN DEFAULT FALSE,
     is_phone_verified BOOLEAN DEFAULT FALSE,
     last_online_at TIMESTAMPTZ,
-	is_bot BOOLEAN DEFAULT FALSE,
+
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+	-- E2EE fields
+	public_key TEXT,
+	wrapped_private_key TEXT,
+	kek_iv VARCHAR(64),
+	pin_salt VARCHAR(64);
 );
+
+ALTER TABLE users
+ADD COLUMN public_key TEXT,
+ADD COLUMN wrapped_private_key TEXT,
+ADD COLUMN kek_iv VARCHAR(64),
+ADD COLUMN pin_salt VARCHAR(64)
 
 CREATE INDEX idx_users_email ON Users(email);
 CREATE INDEX idx_users_phone ON Users(phone_number);
@@ -51,12 +62,34 @@ CREATE TABLE Conversations (
     last_message_id UUID,                -- Sẽ được cập nhật sau khi insert Messages
     last_message_at TIMESTAMPTZ,
     is_active BOOLEAN DEFAULT TRUE,
+	key_status VARCHAR(20) DEFAULT 'no_key' CHECK (key_status IN ('no_key', 'active', 'require_rotation'))
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE Conversations
+ADD COLUMN key_status VARCHAR(20) DEFAULT 'no_key' CHECK (key_status IN ('no_key', 'active', 'require_rotation'))
+
 CREATE INDEX idx_conversations_last_message_at ON Conversations(last_message_at);
 CREATE INDEX idx_conversations_type ON Conversations(conversation_type);
+
+-- =====================================================
+-- Bảng conversationkeysvault
+-- =====================================================
+CREATE TABLE conversationkeysvault (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    key_version INTEGER NOT NULL,
+    wrapped_shared_key TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Index cho conversationkeysvault
+CREATE INDEX idx_vault_conversation_id ON conversationkeysvault(conversation_id);
+CREATE INDEX idx_vault_user_id ON conversationkeysvault(user_id);
+
 
 -- =====================================================
 -- Bảng Participants (Thành viên trong cuộc trò chuyện)
@@ -124,8 +157,17 @@ CREATE TABLE Messages (
     deleted_for_all BOOLEAN DEFAULT FALSE,
     parent_message_id UUID REFERENCES Messages(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+	-- For E2EE: if message is encrypted, `encrypted_content` holds ciphertext and `content` may be NULL (plaintext only stored locally)
+    is_e2ee BOOLEAN DEFAULT FALSE,
+	key_version INTEGER,
+	iv VARCHAR(64);
 );
+
+ALTER TABLE messages
+ADD COLUMN is_e2ee BOOLEAN DEFAULT FALSE,
+ADD COLUMN key_version INTEGER,
+ADD COLUMN iv VARCHAR(64)
 
 CREATE INDEX idx_messages_conversation_created ON Messages(conversation_id, created_at DESC);
 CREATE INDEX idx_messages_sender ON Messages(sender_id);
@@ -462,28 +504,4 @@ CREATE TABLE UserPrivacySettings (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
--- =============================================
--- BOT PLATFORM SCHEMA UPDATES
--- =============================================
 
--- 1. Cập nhật bảng Users để hỗ trợ Bot
-ALTER TABLE "ChatPigeons"."users" ADD COLUMN IF NOT EXISTS "is_bot" BOOLEAN DEFAULT FALSE;
-ALTER TABLE "ChatPigeons"."users" ADD COLUMN IF NOT EXISTS "bot_name" VARCHAR(255);
-ALTER TABLE "ChatPigeons"."users" ADD CONSTRAINT "users_bot_name_unique" UNIQUE ("bot_name");
-
--- 2. Tạo bảng Bots để lưu cấu hình
-CREATE TABLE IF NOT EXISTS "ChatPigeons"."bots" (
-    "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    "bot_user_id" UUID NOT NULL REFERENCES "ChatPigeons"."users"("id") ON DELETE CASCADE,
-    "owner_id" UUID NOT NULL REFERENCES "ChatPigeons"."users"("id") ON DELETE CASCADE,
-    "token_hash" VARCHAR(255) NOT NULL,
-    "webhook_url" VARCHAR(255),
-    "status" VARCHAR(50) DEFAULT 'active',
-    "created_at" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- 3. Tạo Index để truy vấn nhanh
-CREATE INDEX IF NOT EXISTS "idx_bots_bot_user_id" ON "ChatPigeons"."bots"("bot_user_id");
-CREATE INDEX IF NOT EXISTS "idx_bots_owner_id" ON "ChatPigeons"."bots"("owner_id");
-CREATE INDEX IF NOT EXISTS "idx_users_bot_name" ON "ChatPigeons"."users"("bot_name") WHERE is_bot = TRUE;

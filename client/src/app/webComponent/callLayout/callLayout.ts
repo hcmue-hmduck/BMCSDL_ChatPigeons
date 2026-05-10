@@ -116,6 +116,8 @@ export class CallLayoutComponent implements OnInit {
             this.avatarWrap = avatarWrap || null;
 
             await this.authService.setUserInfo(userId);
+            // Call window uses a separate socket instance; register user for room join authorization.
+            this.socketService.emit('userOnline', userId);
             this.socketService.emit('joinConversation', conversationId);
 
             const mode = this.activatedRoute.snapshot.queryParamMap.get('mode');

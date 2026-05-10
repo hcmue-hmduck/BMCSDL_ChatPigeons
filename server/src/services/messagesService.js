@@ -1,5 +1,6 @@
 const { Op, literal } = require('sequelize');
 const messagesModel = require('../models/messagesModel');
+const conversationKeysVaultModel = require('../models/conversationkeysvaultModel');
 const { BadRequestError } = require('../core/errorResponse.js');
 
 
@@ -43,9 +44,35 @@ class MessagesService {
         });
     }
 
-    async getAllMessagesByConversationId(conversationId, limit = 100, offset = 0) {
+    async getAllMessagesByConversationId(
+        conversationId,
+        limit = 100,
+        offset = 0,
+        userId = null,
+        leftAt = null,
+    ) {
+        let whereCondition = { conversation_id: conversationId };
+
+        if (userId) {
+            const vaults = await conversationKeysVaultModel.findAll({
+                where: { user_id: userId, conversation_id: conversationId },
+                attributes: ['key_version'],
+                raw: true
+            });
+            const keyVersions = vaults.map(v => v.key_version);
+
+            whereCondition[Op.or] = [
+                { is_e2ee: false },
+                { is_e2ee: true, key_version: { [Op.in]: keyVersions } },
+            ];
+        }
+
+        if (leftAt) {
+            whereCondition.created_at = { [Op.lte]: leftAt };
+        }
+
         const messages = await messagesModel.findAll({
-            where: { conversation_id: conversationId },
+            where: whereCondition,
             include: [
                 {
                     association: 'call',
@@ -95,7 +122,7 @@ class MessagesService {
 
     // Tạo message mới
     async createMessage(messageData, options = {}) {
-        console.log('Creating message with data:', messageData);
+        // console.log('Creating message with data:', messageData);
         return await messagesModel.create(messageData, options);
     }
 
@@ -127,11 +154,22 @@ class MessagesService {
     async countUnreadMessages(convReadTimestamps) {
         if (convReadTimestamps.length === 0) return {};
 
-        const orConditions = convReadTimestamps.map(item => ({
-            conversation_id: item.conversation_id,
-            created_at: { [Op.gt]: item.last_read_at },
-            is_deleted: false
-        }));
+        const orConditions = convReadTimestamps.map((item) => {
+            const base = {
+                conversation_id: item.conversation_id,
+                created_at: { [Op.gt]: item.last_read_at },
+                is_deleted: false,
+            };
+
+            if (item.left_at) {
+                base.created_at = {
+                    [Op.gt]: item.last_read_at,
+                    [Op.lte]: item.left_at,
+                };
+            }
+
+            return base;
+        });
 
         const counts = await messagesModel.findAll({
             attributes: [

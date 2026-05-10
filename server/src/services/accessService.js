@@ -20,7 +20,7 @@ class AccessService {
         const tokens = await this.#createSession(id, role);
 
         return {
-            user: { id, role, full_name, avatar_url, email },
+            user: { id, role, full_name, avatar_url, email, hasPassword: true },
             tokens,
         };
     }

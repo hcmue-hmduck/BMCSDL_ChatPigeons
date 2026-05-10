@@ -41,7 +41,7 @@
                     (change)="onAvatarFileSelected($event)"
                 />
                 <div class="pf-avatar-ring">
-                    <img [src]="user.avatar_url" alt="avatar" class="pf-avatar-img" />
+                    <img [src]="user.avatar_url || 'assets/AvatarDefault.jpg'" alt="avatar" class="pf-avatar-img" />
                     <button
                         class="pf-cam-btn"
                         title="Đổi ảnh đại diện"
@@ -71,11 +71,11 @@
                 >
                     <div class="pf-section-title">Thông tin cá nhân</div>
                     <div class="pf-rows">
-                        <div class="pf-row" *ngIf="user.bio">
+                        <div class="pf-row">
                             <div class="pf-row-icon"><i class="bi bi-chat-quote-fill"></i></div>
                             <div class="pf-row-body">
                                 <div class="pf-row-label">Tiểu sử</div>
-                                <div class="pf-row-value">{{ user.bio }}</div>
+                                <div class="pf-row-value">{{ user.bio || 'Chưa cập nhật' }}</div>
                             </div>
                         </div>
                         <div class="pf-row">
@@ -83,7 +83,7 @@
                             <div class="pf-row-body">
                                 <div class="pf-row-label">Email</div>
                                 <div class="pf-row-value pf-row-inline">
-                                    <span>{{ user.email }}</span>
+                                    <span>{{ user.email || 'Chưa cập nhật' }}</span>
                                     <span
                                         class="pf-badge pf-badge-ok"
                                         *ngIf="user.is_email_verified"
@@ -91,7 +91,7 @@
                                     >
                                     <span
                                         class="pf-badge pf-badge-warn"
-                                        *ngIf="!user.is_email_verified"
+                                        *ngIf="user.email && !user.is_email_verified"
                                         ><i class="bi bi-exclamation-circle-fill"></i> Chưa xác
                                         thực</span
                                     >
@@ -118,23 +118,23 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="pf-row" *ngIf="user.birthday">
+                        <div class="pf-row">
                             <div class="pf-row-icon"><i class="bi bi-cake2-fill"></i></div>
                             <div class="pf-row-body">
                                 <div class="pf-row-label">Ngày sinh</div>
                                 <div class="pf-row-value">
-                                    {{ user.birthday | date: 'dd/MM/yyyy' }}
+                                    {{ user.birthday ? (user.birthday | date: 'dd/MM/yyyy') : 'Chưa cập nhật' }}
                                 </div>
                             </div>
                         </div>
-                        <div class="pf-row" *ngIf="user.gender">
+                        <div class="pf-row">
                             <div class="pf-row-icon">
                                 <i
                                     class="bi"
                                     [class.bi-gender-male]="user.gender === 'male'"
                                     [class.bi-gender-female]="user.gender === 'female'"
                                     [class.bi-gender-ambiguous]="
-                                        user.gender !== 'male' && user.gender !== 'female'
+                                        !user.gender || (user.gender !== 'male' && user.gender !== 'female')
                                     "
                                 ></i>
                             </div>
@@ -146,8 +146,9 @@
                                         [class.pf-gender-male]="user.gender === 'male'"
                                         [class.pf-gender-female]="user.gender === 'female'"
                                         [class.pf-gender-other]="
-                                            user.gender !== 'male' && user.gender !== 'female'
+                                            user.gender && user.gender !== 'male' && user.gender !== 'female'
                                         "
+                                        *ngIf="user.gender"
                                     >
                                         {{
                                             user.gender === 'male'
@@ -157,6 +158,7 @@
                                                   : 'Khác'
                                         }}
                                     </span>
+                                    <span *ngIf="!user.gender">Chưa cập nhật</span>
                                 </div>
                             </div>
                         </div>
@@ -186,6 +188,12 @@
                         } @else {
                             <button class="pf-btn pf-btn-outline" (click)="toggleSetPassword()">
                                 <i class="bi bi-shield-lock-fill"></i> Thiết lập mật khẩu
+                            </button>
+                        }
+                        <!-- Nút đổi PIN E2EE -->
+                        @if (e2eeModalService.isE2eeReady()) {
+                            <button class="pf-btn pf-btn-outline" (click)="changeE2eePin()">
+                                <i class="bi bi-key-fill"></i> Đổi mã PIN
                             </button>
                         }
                     </div>

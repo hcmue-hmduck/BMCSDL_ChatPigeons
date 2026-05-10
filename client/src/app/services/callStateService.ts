@@ -94,8 +94,8 @@ export class CallStateService {
         this.socketService.emit('call:syncCallState', {
             conversationId: this.conversationId,
             userId: this.authService.getUserId(),
-            callStatus: this.callStatus,
-            isCaller: this.isCaller,
+            callStatus: this.callStatus(),
+            isCaller: this.isCaller(),
         });
     }
 

@@ -20,6 +20,7 @@ import { User } from '../../services/user';
 import { SocketService } from '../../services/socket';
 import { UserInforModel } from '../userinforModel/userinforModel.component';
 import { FileUtils } from '../../utils/FileUtils/fileUltils';
+import { NavigationService } from '../../services/navigation';
 
 @Component({
     selector: 'sidebar-component',
@@ -37,6 +38,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
     authService = inject(AuthService);
     cdr = inject(ChangeDetectorRef);
     router = inject(Router);
+    navService = inject(NavigationService);
 
     // ── State ──────────────────────────────────────────────
     currentUserId = computed(() => this.authService.getUserId());
@@ -59,6 +61,14 @@ export class SidebarComponent implements OnInit, OnDestroy {
 
     ngOnInit() {
         this.setupSocketListeners();
+        
+        // Khởi tạo activeView dựa trên URL hiện tại khi reload
+        const url = this.router.url;
+        if (url.includes('/relationship')) {
+            this.navService.activeView.set('friends');
+        } else if (url.includes('/conversations')) {
+            this.navService.activeView.set('messages');
+        }
     }
 
     ngOnDestroy() {
@@ -113,21 +123,18 @@ export class SidebarComponent implements OnInit, OnDestroy {
 
     // ── Navigation ────────────────────────────────────────
     setView(view: string) {
-        if (view === 'messages') {
-            this.router.navigate(['/conversations']);
-        } else if (view === 'friends') {
-            this.router.navigate(['/relationship']);
-        }
+        this.navService.setView(view as any);
     }
 
     goToMessagesWelcome() {
-        this.router.navigate(['/conversations']);
+        this.navService.goToMessagesWelcome();
     }
 
     isActive(view: string): boolean {
         const url = this.router.url;
         if (view === 'messages') return url.includes('/conversations');
         if (view === 'friends') return url.includes('/relationship');
+
         return false;
     }
 

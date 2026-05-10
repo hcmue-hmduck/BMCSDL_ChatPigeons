@@ -1,0 +1,164 @@
+@if (isVisible()) {
+<div class="e2ee-modal-backdrop">
+    <div class="e2ee-modal-content">
+        <!-- Header -->
+        <div class="modal-header">
+            <div class="header-content">
+                <div class="header-text">
+                    @if (mode() === 'setup') {
+                        <h2>Thiết lập bảo mật</h2>
+                        <p class="mode-label">Bảo vệ tin nhắn của bạn</p>
+                    }
+                    @if (mode() === 'recovery') {
+                        <h2>Khôi phục tin nhắn</h2>
+                        <p class="mode-label">Giải mã tin nhắn đã mã hóa</p>
+                    }
+                    @if (mode() === 'change') {
+                        <h2>Đổi mã PIN</h2>
+                        <p class="mode-label">Cập nhật bảo mật</p>
+                    }
+                </div>
+            </div>
+            
+            @if(mode() !== 'setup') {
+            <button class="close-btn" (click)="closeModal()" title="Đóng">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+            }
+        </div>
+
+        <!-- Body -->
+        <div class="modal-body">
+            @if (mode() === 'setup') {
+                <p class="description">
+                    Tạo một mã PIN gồm <strong>6 số</strong> để mã hóa tin nhắn. Mã PIN này sẽ được sử dụng để giải mã tin nhắn trên tất cả các thiết bị.
+                </p>
+            }
+            @if (mode() === 'recovery') {
+                <p class="description">
+                    Nhập mã PIN <strong>6 số</strong> để giải mã và xem lại tin nhắn đã mã hóa trên thiết bị này.
+                </p>
+            }
+            @if (mode() === 'change') {
+                <p class="description">
+                    Nhập mã PIN hiện tại và mã PIN mới để cập nhật bảo mật của bạn.
+                </p>
+            }
+
+            @if (error()) {
+                <div class="error-alert">
+                    <div class="alert-text">{{error()}}</div>
+                </div>
+            }
+
+            <!-- Form -->
+            <form (ngSubmit)="handleSubmit()">
+                
+                @if (mode() === 'change') {
+                    <div class="form-group">
+                        <label>
+                            <span class="label-text">Mã PIN hiện tại</span>
+                            <span class="label-required">*</span>
+                        </label>
+                        <div class="input-wrapper">
+                            <input 
+                                type="password" 
+                                maxlength="6"
+                                [ngModel]="oldPin()"
+                                (input)="validateNumeric($event, 'oldPin')"
+                                name="oldPin"
+                                placeholder="000000" 
+                                pattern="[0-9]*" 
+                                inputmode="numeric"
+                                required>
+                            <span class="input-count">{{ oldPin().length || 0 }}/6</span>
+                        </div>
+                    </div>
+                }
+
+                <div class="form-group">
+                    <label>
+                        @if (mode() === 'setup' || mode() === 'change') {
+                            <span class="label-text">Mã PIN mới</span>
+                        }
+                        @if (mode() === 'recovery') {
+                            <span class="label-text">Mã PIN</span>
+                        }
+                        <span class="label-required">*</span>
+                    </label>
+                    <div class="input-wrapper">
+                        <input 
+                            type="password" 
+                            maxlength="6"
+                            [ngModel]="pin()"
+                            (input)="validateNumeric($event, 'pin')"
+                            name="pin"
+                            placeholder="000000" 
+                            pattern="[0-9]*" 
+                            inputmode="numeric"
+                            required>
+                        <span class="input-count">{{ pin().length || 0 }}/6</span>
+                    </div>
+                </div>
+
+                @if (mode() === 'setup' || mode() === 'change') {
+                    <div class="form-group">
+                        <label>
+                            <span class="label-text">Xác nhận mã PIN</span>
+                            <span class="label-required">*</span>
+                        </label>
+                        <div class="input-wrapper">
+                            <input 
+                                type="password" 
+                                maxlength="6"
+                                [ngModel]="confirmPin()"
+                                (input)="validateNumeric($event, 'confirmPin')"
+                                name="confirmPin"
+                                placeholder="000000" 
+                                pattern="[0-9]*" 
+                                inputmode="numeric"
+                                required>
+                            <span class="input-count">{{ confirmPin().length || 0 }}/6</span>
+                        </div>
+                    </div>
+                }
+
+                <button type="submit" class="submit-btn" [disabled]="loading()" [ngClass]="{ 'is-loading': loading() }">
+                    @if (loading()) {
+                        <span class="btn-loader">
+                            <span class="spinner"></span>
+                            <span>Đang xử lý...</span>
+                        </span>
+                    }
+                    @if (!loading() && mode() === 'setup') {
+                        <span class="btn-text">
+                            <span>Tạo mã PIN</span>
+                        </span>
+                    }
+                    @if (!loading() && mode() === 'recovery') {
+                        <span class="btn-text">
+                            <span>Mở khóa</span>
+                        </span>
+                    }
+                    @if (!loading() && mode() === 'change') {
+                        <span class="btn-text">
+                            <span>Lưu thay đổi</span>
+                        </span>
+                    }
+                </button>
+
+                @if (mode() === 'setup') {
+                    <div class="modal-footer-actions">
+                        <button type="button" class="logout-link-btn" (click)="handleLogout()">
+                            <i class="bi bi-box-arrow-right"></i> Đăng xuất tài khoản
+                        </button>
+                    </div>
+                }
+            </form>
+        </div>
+    </div>
+</div>
+}
