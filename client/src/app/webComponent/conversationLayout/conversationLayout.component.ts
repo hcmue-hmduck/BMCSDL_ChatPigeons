@@ -82,8 +82,8 @@ export class ConversationLayoutComponent implements OnInit, OnDestroy {
 
     userBlock = signal<any[]>([]);
 
-    // Conversation selection state (local to this component)
-    selectedConversationId = signal<string>('');
+    // Conversation selection state (synchronized with store)
+    selectedConversationId = computed(() => this.convStore.activeConversationId() || '');
     selectedConversationType = '';
     getMessageInfor: any = {};
     isFirstConversationReady = signal(false);
@@ -145,11 +145,9 @@ export class ConversationLayoutComponent implements OnInit, OnDestroy {
         ).subscribe(() => {
             const id = parseUrlId();
             this._convID.set(id);
-            // Chỉ cập nhật active ID nếu có ID thực tế trong URL. 
-            // Nếu không có (về route gốc), ta giữ nguyên lastId để logic Restore có thể hoạt động.
-            if (id) {
-                this.convStore.setActiveConversationId(id);
-            }
+            
+            // Đồng bộ selection với route mới
+            this.syncSelectionWithRoute();
         });
 
         effect(() => {
@@ -253,7 +251,7 @@ export class ConversationLayoutComponent implements OnInit, OnDestroy {
 
     handleConversationCreated(newId: string, realParticipants?: any[]) {
         const oldId = this.selectedConversationId();
-        this.selectedConversationId.set(newId);
+        this.convStore.setActiveConversationId(newId);
 
         // JOIN ROOM MỚI NGAY LẬP TỨC
         this.socketService.emit('joinConversation', newId);
@@ -303,7 +301,6 @@ export class ConversationLayoutComponent implements OnInit, OnDestroy {
         };
         this.dispatchSummaryTrigger();
 
-        this.selectedConversationId.set(conv.conversation_id);
         this.convStore.setActiveConversationId(conv.conversation_id);
         this.selectedConversationType = conv.type;
         const selectedConv = this.conversations()?.homeConversationData?.joinedConversations?.find(
@@ -534,7 +531,6 @@ export class ConversationLayoutComponent implements OnInit, OnDestroy {
     }
 
     private resetToWelcome() {
-        this.selectedConversationId.set('');
         this.selectedConversationType = '';
         this.getMessageInfor = {};
         this.convStore.toggleConversationInfor(false);
@@ -551,37 +547,23 @@ export class ConversationLayoutComponent implements OnInit, OnDestroy {
 
     private syncSelectionWithRoute() {
         if (!this.convID) {
-            if (this.selectedConversationId()) {
+            // Chỉ thực hiện reset hoàn toàn UI nếu Store cũng đã rỗng (do click Logo)
+            // Nếu Store vẫn còn ID, ta để effect Auto-restore xử lý việc redirect.
+            if (!this.convStore.activeConversationId()) {
                 this.resetToWelcome();
             }
             return;
         }
 
-        const found = this.convStore.getConversationById(this.convID);
-        if (found) {
-            if (String(this.selectedConversationId()) !== String(found.conversation_id)) {
+        // Nếu ID trong URL khác với ID đang active trong Store, cập nhật lại
+        if (String(this.convStore.activeConversationId()) !== String(this.convID)) {
+            const found = this.convStore.getConversationById(this.convID);
+            if (found) {
                 this.handleConversationID(found);
+            } else if (this.convID.startsWith('conv_')) {
+                // Xử lý trường hợp ID ảo
+                this.convStore.setActiveConversationId(this.convID);
             }
-        } else {
-            // Chỉ xử lý tiếp nếu Store đã thực sự tải xong dữ liệu
-            if (!this.convStore.isDataLoaded()) return;
-
-            // Duy trì ID ảo (đang chờ gởi tin nhắn đầu tiên) NẾU nó có trong RAM (Navigation nội bộ)
-            // Nếu Reload trang, dữ liệu ảo mất đi -> getConversationById sẽ trả về null -> redirect về welcome.
-            if (this.convID.startsWith('conv_')) {
-                const virtualExists = this.convStore.getConversationById(this.convID);
-                if (virtualExists) {
-                    if (this.selectedConversationId() !== this.convID) {
-                        this.selectedConversationId.set(this.convID);
-                    }
-                    return;
-                }
-            }
-
-            // Chỉ xóa selection và quay về welcome nếu ĐÃ LOAD XONG dữ liệu mà vẫn không thấy hội thoại thực
-            // Bao gồm cả trường hợp ID ảo (conv_) sau khi reload vì ID này không có trong store mới từ server
-            console.warn('Conversation not found after load, resetting to welcome:', this.convID);
-            this.resetToWelcome();
         }
     }
 
