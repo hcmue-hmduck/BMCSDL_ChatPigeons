@@ -85,9 +85,10 @@ class OneSignalService {
      * @param {string} senderId - ID của người gửi (sẽ bị loại)
      * @param {string} senderName - Tên của người gửi
      * @param {string} messageContent - Nội dung tin nhắn
-     * @param {object} senderInfo - User info of sender (optional)
+    * @param {object} senderInfo - User info of sender (optional)
+    * @param {string} url - Click-through URL (optional)
      */
-    async sendMessageNotification(participants, senderId, senderName, messageContent, senderInfo = {}) {
+    async sendMessageNotification(participants, senderId, senderName, messageContent, senderInfo = {}, url = null) {
         try {
             // Filter ra participants khác sender
             const recipientIds = participants
@@ -104,6 +105,7 @@ class OneSignalService {
             const content = 'You have a new message';
 
             return await this.sendNotificationToUsers(recipientIds, title, content, {
+                ...(url ? { url } : {}),
                 // Optional: add custom data
                 data: {
                     sender_id: senderId,

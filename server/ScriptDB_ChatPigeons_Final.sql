@@ -1,9 +1,3 @@
-/*
-=====================================================
-SCRIPT DATABASE CHATPIGEONS - SQL SERVER (MSSQL)
-Phiên bản: Final V2 (Đầy đủ created_at & updated_at)
-=====================================================
-*/
 
 -- 1. Tạo Database
 IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'ChatPigeons')

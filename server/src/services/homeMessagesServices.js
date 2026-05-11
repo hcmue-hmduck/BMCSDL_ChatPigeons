@@ -304,13 +304,22 @@ class HomeMessagesService {
                 const participants = await participantsService.getParticipantByConversationId(conversationId);
                 const sender = await usersService.getUserById(senderId);
 
+
+                const baseUrl =
+                    process.env.LINK_CLIENT ||
+                    process.env.LINK_CLIENT_PROD ||
+                    process.env.LINK_CLIENT_LOCAL_IP ||
+                    '';
+                const url = baseUrl ? `${baseUrl}/conversations/${conversationId}` : undefined;
+
                 if (participants && participants.length > 0) {
                     await oneSignalService.sendMessageNotification(
                         participants,
                         senderId,
                         sender ? sender.full_name : 'Someone',
                         content,
-                        sender
+                        sender,
+                        url
                     );
                 }
             } catch (error) {
