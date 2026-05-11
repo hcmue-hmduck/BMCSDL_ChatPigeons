@@ -29,7 +29,11 @@
             "assets": [
               "src/assets",
               "public/favicon.ico",
-              "src/OneSignalSDKWorker.js" 
+              {
+                "glob": "OneSignalSDKWorker.js",
+                "input": "src",
+                "output": "/"
+              }
             ],
             "styles": [
               "src/styles.css"

@@ -10,6 +10,7 @@ import { IntroLayoutComponent } from './webComponent/introLayout/introLayout.com
 import { MessagesLayoutComponent } from './webComponent/messagesLayout/messagesLayout.component';
 import { authGuard } from './guards/auth.guard';
 import { guestGuard } from './guards/guest-guard';
+import { adminGuard } from './guards/admin-guard';
 
 export const routes: Routes = [
     {
@@ -52,5 +53,6 @@ export const routes: Routes = [
     {
         path: 'admin',
         component: AdminLayoutComponent,
+        canActivate: [authGuard, adminGuard],
     }
 ];
