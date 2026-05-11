@@ -1,0 +1,19 @@
+Error
+    at Query.run (C:\Users\ROG\Desktop\BMCSDL\server\node_modules\sequelize\lib\dialects\mssql\query.js:107:25)
+    at C:\Users\ROG\Desktop\BMCSDL\server\node_modules\sequelize\lib\sequelize.js:315:28
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async CallService.startCall (C:\Users\ROG\Desktop\BMCSDL\server\src\services\callService.js:18:28)
+    at async C:\Users\ROG\Desktop\BMCSDL\server\src\services\homeCallService.js:10:26
+    at async C:\Users\ROG\Desktop\BMCSDL\server\node_modules\sequelize\lib\sequelize.js:507:18
+    at async HomeCallService.startCall (C:\Users\ROG\Desktop\BMCSDL\server\src\services\homeCallService.js:9:28)
+    at async startHomeCall (C:\Users\ROG\Desktop\BMCSDL\server\src\controllers\callController.js:10:23)
+Original Error:
+Error: Error converting data type varchar to datetime.
+    at RequestTokenHandler.onErrorMessage (C:\Users\ROG\Desktop\BMCSDL\server\node_modules\tedious\lib\token\handler.js:287:21)
+    at Readable.<anonymous> (C:\Users\ROG\Desktop\BMCSDL\server\node_modules\tedious\lib\token\token-stream-parser.js:19:33)
+    at Readable.emit (node:events:508:28)
+    at addChunk (node:internal/streams/readable:563:12)
+    at readableAddChunkPushObjectMode (node:internal/streams/readable:540:3)
+    at Readable.push (node:internal/streams/readable:395:5)
+    at nextAsync (node:internal/streams/from:194:22)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
