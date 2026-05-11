@@ -6,33 +6,31 @@ const conversationsService = require('./conversationsService.js');
 
 class HomeCallService {
     async startCall({ conversation_id, caller_id, call_type, media_type }) {
-        const newMessage = await sequelize.transaction(async (t) => {
-            const call = await callService.startCall(
-                { conversation_id, caller_id, call_type, media_type },
-                { transaction: t },
-            );
+        const result = await sequelize.query(
+            'EXEC sp_InitCall ?, ?, ?, ?, ?',
+            {
+                replacements: [
+                    conversation_id,
+                    caller_id,
+                    call_type,
+                    media_type,
+                    `Cuộc gọi ${media_type === 'audio' ? 'thoại' : media_type}`
+                ],
+                type: sequelize.QueryTypes.SELECT
+            }
+        );
 
-            const messageData = {
-                conversation_id,
-                sender_id: caller_id,
-                message_type: 'call',
-                call_id: call.id,
-                content: `Cuộc gọi  ${media_type === 'audio' ? 'thoại' : media_type}`,
-            };
+        const newMessageId = result[0].NewMessageId;
+        const newCallId = result[0].NewCallId;
 
-            let message = await messagesService.createMessage(messageData, { transaction: t });
+        // Lấy thông tin đầy đủ để trả về cho client giống như trước
+        const message = await messagesService.getMessageById(newMessageId);
+        const call = await callService.getCallById(newCallId);
 
-            return {
-                ...message.get({ plain: true }), // Biến instance thành object thường
-                call: call.get({ plain: true }),
-            };
-        });
-
-        await conversationsService.updateConversation(conversation_id, {
-            last_message_id: newMessage.id,
-        });
-
-        return newMessage;
+        return {
+            ...message.get({ plain: true }),
+            call: call.get({ plain: true })
+        };
     }
 
     async createLogJoinGroupCall({ user_id, conversation_id }) {

@@ -4,14 +4,13 @@ const { Op } = require('sequelize');
 class UserBlockService {
     async getUserBlocks(blocker_id) {
         try {
-            return await userblockModel.findAll({
-                where: {
-                    [Op.or]: [
-                        { blocker_id: blocker_id },
-                        { blocked_id: blocker_id }
-                    ]
+            return await userblockModel.sequelize.query(
+                'SELECT * FROM vw_GetBlockedUsers WHERE blocker_id = :userId OR blocked_id = :userId',
+                {
+                    replacements: { userId: blocker_id },
+                    type: userblockModel.sequelize.QueryTypes.SELECT
                 }
-            });
+            );
         } catch (error) {
             throw error;
         }
@@ -19,12 +18,22 @@ class UserBlockService {
 
     async createUserBlock(blocker_id, blocked_id, reason) {
         try {
-            const userBlock = await userblockModel.create({
-                blocker_id,
-                blocked_id,
-                reason
+            await userblockModel.sequelize.query(
+                'EXEC sp_BlockUser ?, ?, ?',
+                {
+                    replacements: [
+                        blocker_id,
+                        blocked_id,
+                        reason || null
+                    ],
+                    type: userblockModel.sequelize.QueryTypes.RAW
+                }
+            );
+
+            // Lấy lại bản ghi vừa tạo để trả về
+            return await userblockModel.findOne({
+                where: { blocker_id, blocked_id }
             });
-            return userBlock;
         } catch (error) {
             throw error;
         }
@@ -32,11 +41,18 @@ class UserBlockService {
 
     async deleteUserBlock(id) {
         try {
-            return await userblockModel.destroy({
-                where: {
-                    id: id,
+            await userblockModel.sequelize.query(
+                'EXEC sp_UnblockUser ?, ?, ?',
+                {
+                    replacements: [
+                        id,
+                        null,
+                        null
+                    ],
+                    type: userblockModel.sequelize.QueryTypes.RAW
                 }
-            });
+            );
+            return { success: true };
         } catch (error) {
             throw error;
         }

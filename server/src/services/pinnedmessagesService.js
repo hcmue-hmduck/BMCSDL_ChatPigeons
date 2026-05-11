@@ -2,15 +2,39 @@ const pinnedmessagesModel = require('../models/pinnedmessagesModel');
 
 class PinnedMessagesService {
     async createPinnedMessage(data) {
-        return await pinnedmessagesModel.create(data);
+        const { message_id, conversation_id, pinned_by, note } = data;
+
+        await pinnedmessagesModel.sequelize.query(
+            'EXEC sp_PinMessage ?, ?, ?, ?',
+            {
+                replacements: [
+                    message_id,
+                    conversation_id,
+                    pinned_by,
+                    note || null
+                ],
+                type: pinnedmessagesModel.sequelize.QueryTypes.RAW
+            }
+        );
+
+        // Lấy lại bản ghi vừa tạo để trả về
+        return await pinnedmessagesModel.findOne({
+            where: { message_id, conversation_id }
+        });
     }
 
     async deletePinnedMessage(pinMessageId) {
-        return await pinnedmessagesModel.destroy({
-            where: {
-                id: pinMessageId
+        await pinnedmessagesModel.sequelize.query(
+            'EXEC sp_UnpinMessage ?, ?',
+            {
+                replacements: [
+                    pinMessageId,
+                    null
+                ],
+                type: pinnedmessagesModel.sequelize.QueryTypes.RAW
             }
-        });
+        );
+        return { success: true };
     }
 
     async getAllPinnedMessages() {
@@ -18,15 +42,13 @@ class PinnedMessagesService {
     }
 
     async getPinnedMessagesByConversationId(conversationId) {
-        return await pinnedmessagesModel.findAll({
-            where: {
-                conversation_id: conversationId,
-                is_deleted: false,
-            },
-            order: [
-                ['pinned_at', 'ASC']
-            ]
-        });
+        return await pinnedmessagesModel.sequelize.query(
+            'SELECT * FROM vw_GetPinnedMessages WHERE conversation_id = :conversationId ORDER BY pinned_at ASC',
+            {
+                replacements: { conversationId },
+                type: pinnedmessagesModel.sequelize.QueryTypes.SELECT
+            }
+        );
     }
 
     async updatePinnedMessage(pinMessageId, data) {

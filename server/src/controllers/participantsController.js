@@ -6,7 +6,8 @@ class ParticipantsController {
         const convID = req.params.convID;
         const { requireRotation = false, ...participantData } = req.body;
 
-        const newParticipant = await participantsService.createParticipant(convID, participantData, requireRotation === true);
+        // Truyền thêm inviterId (là user đang đăng nhập) để SP kiểm tra quyền
+        const newParticipant = await participantsService.createParticipant(convID, { ...participantData, inviterId: req.user.id }, requireRotation === true);
         new SuccessResponse({
             message: 'Create participant successfully',
             metadata: {
@@ -18,7 +19,9 @@ class ParticipantsController {
     async putParticipant(req, res) {
         const id = req.params.id;
         const participantData = req.body;
-        const updatedParticipant = await participantsService.updateParticipant(id, participantData);
+        
+        // Truyền thêm req.user.id làm changerId để SP kiểm tra quyền Owner khi đổi role
+        const updatedParticipant = await participantsService.updateParticipant(id, participantData, req.user.id);
         new SuccessResponse({
             message: 'Update participant successfully',
             metadata: {

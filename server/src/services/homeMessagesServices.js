@@ -114,7 +114,7 @@ class HomeMessagesService {
             const sender = targetMsg ? userMap.get(targetMsg.sender_id) : null;
 
             return {
-                ...pin.dataValues,
+                ...pin,
                 pinned_by_name: pinner ? pinner.full_name : 'Unknown',
                 content: targetMsg ? targetMsg.content : 'Tin nhắn không tồn tại hoặc đã bị xóa',
                 sender_id: targetMsg ? targetMsg.sender_id : null,
@@ -132,7 +132,7 @@ class HomeMessagesService {
         const mappedMessages = messages.map((m) => {
             const sender = userMap.get(m.sender_id);
             const result = {
-                ...m.dataValues,
+                ...m,
                 sender_name: sender ? sender.full_name : '',
                 sender_avatar: sender ? sender.avatar_url : '',
                 sender_status: sender ? sender.status : '',

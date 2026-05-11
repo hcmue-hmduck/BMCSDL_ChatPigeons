@@ -6,6 +6,16 @@ const conversationsService = require('./conversationsService');
 class ParticipantsService {
     // Lấy participants theo điều kiện filter (where object)
     async getAllParticipants(where = {}) {
+        if (where.conversation_id) {
+            const conversationIds = Array.isArray(where.conversation_id) ? where.conversation_id : [where.conversation_id];
+            return await participantsModel.sequelize.query(
+                'SELECT * FROM vw_GetParticipants WHERE conversation_id IN (:conversationIds)',
+                {
+                    replacements: { conversationIds },
+                    type: participantsModel.sequelize.QueryTypes.SELECT
+                }
+            );
+        }
         return await participantsModel.findAll({ where });
     }
 
@@ -70,31 +80,69 @@ class ParticipantsService {
      * @param {boolean} requireRotation - Nếu true, cập nhật key_status = 'require_rotation' sau khi thêm
      */
     async createParticipant(conversation_id, participantData, requireRotation = false) {
-        const { user_id } = participantData;
+        const { user_id, inviterId } = participantData;
         if (!conversation_id || !user_id) throw new BadRequestError('params invalid');
 
-        const now = new Date().toISOString();
+        // Nếu có người mời (inviterId), dùng SP để thêm thành viên và kiểm tra quyền
+        if (inviterId) {
+            await participantsModel.sequelize.query(
+                'EXEC sp_AddGroupMember ?, ?, ?',
+                {
+                    replacements: [
+                        conversation_id,
+                        user_id,
+                        inviterId
+                    ],
+                    type: participantsModel.sequelize.QueryTypes.RAW
+                }
+            );
+            return await participantsModel.findOne({
+                where: { conversation_id, user_id }
+            });
+        }
 
-        // Kiểm tra xem đã từng tham gia chưa
-        const existing = await participantsModel.findOne({
-            where: { conversation_id, user_id },
-        });
+        // Kiểm tra xem có trường nào khác ngoài user_id và role không (SP chỉ hỗ trợ 2 trường này)
+        const supportedFields = ['user_id', 'role'];
+        const dataKeys = Object.keys(participantData).filter(k => k !== 'inviterId');
+        const canUseSP = dataKeys.every(key => supportedFields.includes(key));
 
         let participant;
-        if (existing) {
-            // Đã từng tham gia → tái kích hoạt
-            participant = await existing.update({
-                left_at: null,
-                role: participantData.role || existing.role,
-                nick_name: participantData.nick_name || existing.nick_name,
-                is_muted: participantData.is_muted ?? existing.is_muted,
+        if (canUseSP) {
+            await participantsModel.sequelize.query(
+                'EXEC sp_CreateParticipant ?, ?, ?',
+                {
+                    replacements: [
+                        conversation_id,
+                        user_id,
+                        role || 'member'
+                    ],
+                    type: participantsModel.sequelize.QueryTypes.RAW
+                }
+            );
+            participant = await participantsModel.findOne({
+                where: { conversation_id, user_id }
             });
         } else {
-            // Chưa từng tham gia → tạo mới
-            participant = await participantsModel.create({
-                conversation_id,
-                ...participantData,
+            // Fallback cho logic cũ nếu có các trường như nick_name, is_muted...
+            const existing = await participantsModel.findOne({
+                where: { conversation_id, user_id },
             });
+
+            if (existing) {
+                // Đã từng tham gia → tái kích hoạt
+                participant = await existing.update({
+                    left_at: null,
+                    role: participantData.role || existing.role,
+                    nick_name: participantData.nick_name || existing.nick_name,
+                    is_muted: participantData.is_muted ?? existing.is_muted,
+                });
+            } else {
+                // Chưa từng tham gia → tạo mới
+                participant = await participantsModel.create({
+                    conversation_id,
+                    ...participantData,
+                });
+            }
         }
 
         // Nếu cần rotate key sau khi thêm thành viên
@@ -106,14 +154,65 @@ class ParticipantsService {
     }
 
     // Cập nhật participant
-    async updateParticipant(id, participantData) {
+    async updateParticipant(id, participantData, changerId = null) {
         const participant = await participantsModel.findByPk(id);
-        if (participant) {
-            return await participant.update({
-                ...participantData,
-            });
+        if (!participant) return null;
+
+        // Nếu có đổi role và có thông tin người đổi (ChangerId), dùng SP để kiểm tra quyền Owner
+        if (participantData.role && changerId) {
+            try {
+                await participantsModel.sequelize.query(
+                    'EXEC sp_ChangeMemberRole ?, ?, ?, ?',
+                    {
+                        replacements: [
+                            participant.conversation_id,
+                            participant.user_id,
+                            participantData.role,
+                            changerId
+                        ],
+                        type: participantsModel.sequelize.QueryTypes.RAW
+                    }
+                );
+                await participant.reload();
+                return participant;
+            } catch (error) {
+                console.error('ERROR IN UPDATE PARTICIPANT SP:', error);
+                const fs = require('fs');
+                let errorMsg = error.stack || error.message;
+                if (error.original) {
+                    errorMsg += '\nOriginal Error:\n' + (error.original.stack || error.original.message);
+                }
+                fs.writeFileSync('c:\\Users\\ROG\\Desktop\\BMCSDL\\server\\error.log', errorMsg);
+                throw error;
+            }
         }
-        return null;
+
+        // Kiểm tra xem các trường cần update có nằm trong danh sách SP hỗ trợ không
+        const { nick_name, is_muted, is_pinned, last_read_message_id } = participantData;
+        const supportedFields = ['nick_name', 'is_muted', 'is_pinned', 'last_read_message_id'];
+        const dataKeys = Object.keys(participantData);
+        const canUseSP = dataKeys.every(key => supportedFields.includes(key));
+
+        if (canUseSP) {
+            await participantsModel.sequelize.query(
+                'EXEC sp_UpdateParticipant ?, ?, ?, ?, ?',
+                {
+                    replacements: [
+                        id,
+                        nick_name || null,
+                        is_muted ?? null,
+                        is_pinned ?? null,
+                        last_read_message_id || null
+                    ],
+                    type: participantsModel.sequelize.QueryTypes.RAW
+                }
+            );
+            await participant.reload();
+            return participant;
+        } else {
+            // Logic cũ cho các cập nhật khác (nếu có)
+            return await participant.update(participantData);
+        }
     }
 
     /**
@@ -125,19 +224,22 @@ class ParticipantsService {
     async leaveConversation(conversation_id, user_id) {
         if (!conversation_id || !user_id) throw new BadRequestError('params invalid');
 
-        const participant = await participantsModel.findOne({
-            where: { conversation_id, user_id, left_at: null },
-        });
+        try {
+            await participantsModel.sequelize.query(
+                'EXEC sp_LeaveConversation ?, ?',
+                {
+                    replacements: [
+                        conversation_id,
+                        user_id
+                    ],
+                    type: participantsModel.sequelize.QueryTypes.RAW
+                }
+            );
 
-        if (!participant) throw new BadRequestError('Bạn không phải thành viên của cuộc hội thoại này');
-
-        const now = new Date().toISOString();
-        await participant.update({ left_at: now });
-
-        // Tự động đặt cờ cần xoay key
-        await conversationsService.updateKeyStatus(conversation_id, 'require_rotation');
-
-        return { success: true };
+            return { success: true };
+        } catch (error) {
+            throw error;
+        }
     }
 
     /**
@@ -148,31 +250,22 @@ class ParticipantsService {
      * @param {string} actor_id - Người thực hiện kick (phải là admin/owner)
      * @param {string} target_user_id - Người bị kick
      */
+    // Kick member
     async kickMember(conversation_id, actor_id, target_user_id) {
         if (!conversation_id || !actor_id || !target_user_id) throw new BadRequestError('params invalid');
         if (actor_id === target_user_id) throw new BadRequestError('Không thể tự kick chính mình');
 
-        // Kiểm tra quyền của người thực hiện
-        const actorParticipant = await participantsModel.findOne({
-            where: { conversation_id, user_id: actor_id, left_at: null },
-        });
-        if (!actorParticipant) throw new ForbiddenError('Bạn không phải thành viên của cuộc hội thoại này');
-        if (!['admin', 'owner'].includes(actorParticipant.role)) {
-            throw new ForbiddenError('Bạn không có quyền kick thành viên');
-        }
-
-        // Kiểm tra người bị kick
-        const targetParticipant = await participantsModel.findOne({
-            where: { conversation_id, user_id: target_user_id, left_at: null },
-        });
-        if (!targetParticipant) throw new BadRequestError('Thành viên không tồn tại trong nhóm');
-        if (targetParticipant.role === 'owner') throw new ForbiddenError('Không thể kick owner');
-
-        const now = new Date().toISOString();
-        await targetParticipant.update({ left_at: now });
-
-        // Cập nhật key_status = require_rotation (Client của actor sẽ thực hiện rotate ngay) - đã rotate trên client
-        await conversationsService.updateKeyStatus(conversation_id, 'require_rotation');
+        await participantsModel.sequelize.query(
+            'EXEC sp_KickGroupMember ?, ?, ?',
+            {
+                replacements: [
+                    conversation_id,
+                    target_user_id,
+                    actor_id
+                ],
+                type: participantsModel.sequelize.QueryTypes.RAW
+            }
+        );
 
         return { success: true, kicked_user_id: target_user_id };
     }

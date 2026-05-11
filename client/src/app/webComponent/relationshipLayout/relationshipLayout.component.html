@@ -211,7 +211,7 @@
           <div class="friend-row" [class.online]="friend.status === 'online'" [class.offline]="friend.status !== 'online'">
             <div class="user-cell">
               <div class="avatar-wrapper">
-                <img [src]="friend.avatar_url" alt="Avatar" class="avatar-img" referrerPolicy="no-referrer">
+                <img [src]="friend.avatar_url || 'assets/AvatarDefault.jpg'" alt="Avatar" class="avatar-img" referrerPolicy="no-referrer">
                 <div class="status-indicator" [class.online]="friend.status === 'online'" [class.offline]="friend.status !== 'online'"></div>
               </div>
               <div class="user-info">
@@ -254,7 +254,7 @@
           <div class="friend-row" [class.online]="request.status === 'online'" [class.offline]="request.status !== 'online'">
             <div class="user-cell">
               <div class="avatar-wrapper">
-                <img [src]="request.sender_avatar" alt="Avatar" class="avatar-img" referrerPolicy="no-referrer">
+                <img [src]="request.sender_avatar || 'assets/AvatarDefault.jpg'" alt="Avatar" class="avatar-img" referrerPolicy="no-referrer">
                 <div class="status-indicator" [class.online]="request.status === 'online'" [class.offline]="request.status !== 'online'"></div>
               </div>
               <div class="user-info">
@@ -294,7 +294,7 @@
           <div class="friend-row" [class.online]="request.status === 'online'" [class.offline]="request.status !== 'online'">
             <div class="user-cell">
               <div class="avatar-wrapper">
-                <img [src]="request.receiver_avatar" alt="Avatar" class="avatar-img" referrerPolicy="no-referrer">
+                <img [src]="request.receiver_avatar || 'assets/AvatarDefault.jpg'" alt="Avatar" class="avatar-img" referrerPolicy="no-referrer">
                 <div class="status-indicator" [class.online]="request.status === 'online'" [class.offline]="request.status !== 'online'"></div>
               </div>
               <div class="user-info">
@@ -329,7 +329,7 @@
           <div class="friend-row offline">
             <div class="user-cell">
               <div class="avatar-wrapper">
-                <img [src]="user.avatar_url" alt="Avatar" class="avatar-img" referrerPolicy="no-referrer">
+                <img [src]="user.avatar_url || 'assets/AvatarDefault.jpg'" alt="Avatar" class="avatar-img" referrerPolicy="no-referrer">
                 <div class="status-indicator offline"></div>
               </div>
               <div class="user-info">

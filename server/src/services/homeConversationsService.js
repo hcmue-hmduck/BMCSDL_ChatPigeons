@@ -10,16 +10,28 @@ class HomeConversationService {
     // Lấy danh sách conversations của user để hiển thị sidebar
     async getAllUserMessagesInJoinedConversations(userId) {
         // 1. Lấy tất cả participant record của user (bao gồm cả các cuộc hội thoại đã rời)
-        const userParticipants = await participantsService.getAllParticipants({ user_id: userId });
-        const conversationIds = userParticipants.map((p) => p.conversation_id);
+        const userConversations = await messagesModel.sequelize.query(
+            'SELECT * FROM vw_GetConversations WHERE user_id = :userId AND is_active = 1',
+            {
+                replacements: { userId },
+                type: messagesModel.sequelize.QueryTypes.SELECT
+            }
+        );
+
+        const conversationIds = userConversations.map((c) => c.conversation_id);
         if (conversationIds.length === 0) return {
             userInfo: await usersService.getUserById(userId),
             joinedConversations: []
         };
 
-        // 2. Batch query song song: conversations + toàn bộ participants trong các conversations đó
-        const [conversations, allParticipants] = await Promise.all([
-            conversationsService.getAllConversations({ id: conversationIds }),
+        const conversations = userConversations.map(c => ({
+            ...c,
+            id: c.conversation_id
+        }));
+
+        const userParticipants = userConversations; // Giữ lại biến này cho các logic phía sau
+
+        const [allParticipants] = await Promise.all([
             participantsService.getAllParticipants({ conversation_id: conversationIds }),
         ]);
 
@@ -146,7 +158,7 @@ class HomeConversationService {
         }
 
         // 5. Batch count unread messages
-        const unreadCountsMap = await messagesService.countUnreadMessages(convReadTimestamps);
+        const unreadCountsMap = await messagesService.countUnreadMessages(userId);
 
         // Log results for verification
         if (convReadTimestamps.length > 0) {
@@ -225,14 +237,37 @@ class HomeConversationService {
     }
 
     async createConversation(participants_id, conversation_type, name, avatar_url, created_by, last_message_id, last_message_at) {
-        const conv = await conversationsService.createConversation(conversation_type, name, avatar_url, created_by, last_message_id, last_message_at);
+        let conv;
+        let participants = [];
+        let you;
 
-        const participants = [];
-        if (participants_id) {
-            participants.push(await participantsService.createParticipant(conv.id, { user_id: participants_id }));
+        if (conversation_type === 'direct') {
+            const result = await messagesModel.sequelize.query(
+                'EXEC sp_CreateDirectConversation ?, ?',
+                {
+                    replacements: [
+                        created_by,
+                        participants_id
+                    ],
+                    type: messagesModel.sequelize.QueryTypes.SELECT
+                }
+            );
+            const newConvId = result[0].NewConversationId;
+            conv = await conversationsService.getConversationById(newConvId);
+
+            // Lấy danh sách participants vừa tạo từ SP
+            const parts = await participantsService.getParticipantByConversationId(newConvId);
+            you = parts.find(p => p.user_id === created_by);
+            const other = parts.find(p => p.user_id === participants_id);
+            if (other) participants.push(other);
+        } else {
+            conv = await conversationsService.createConversation(conversation_type, name, avatar_url, created_by, last_message_id, last_message_at);
+
+            if (participants_id) {
+                participants.push(await participantsService.createParticipant(conv.id, { user_id: participants_id }));
+            }
+            you = await participantsService.createParticipant(conv.id, { user_id: created_by, role: 'owner' });
         }
-
-        const you = await participantsService.createParticipant(conv.id, { user_id: created_by, role: 'owner' });
 
         // Enrich participants with user details (full_name, avatar_url)
         const allUserIds = [created_by];
@@ -272,7 +307,10 @@ class HomeConversationService {
             participants.push(await participantsService.createParticipant(conv.id, { user_id }));
         }
 
-        const you = await participantsService.createParticipant(conv.id, { user_id: created_by, role: 'owner' });
+        const you = await participantsService.getParticipant({
+            conversation_id: conv.id,
+            user_id: created_by
+        });
 
         const allUserIds = [created_by, ...participants_ids];
         const users = await usersService.getAllUsers(

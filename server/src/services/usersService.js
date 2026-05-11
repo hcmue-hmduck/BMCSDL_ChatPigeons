@@ -7,21 +7,25 @@ const { getUpdateData } = require('../utils/dataUtil.js');
 class UsersService {
     // Lấy users theo điều kiện filter
     async getAllUsers(where = {}, options = {}) {
-        const resolvedWhere = { is_active: true, ...where };
-
-        resolvedWhere.public_key = { [Op.ne]: null };
+        let query = 'SELECT * FROM vw_GetUsersByIds WHERE is_active = 1 AND public_key IS NOT NULL';
+        const replacements = {};
 
         if (where.id) {
-            resolvedWhere.id = Array.isArray(where.id) ? { [Op.in]: where.id } : where.id;
+            const userIds = Array.isArray(where.id) ? where.id : [where.id];
+            query += ' AND id IN (:userIds)';
+            replacements.userIds = userIds;
         }
 
         if (where.full_name && typeof where.full_name === 'string') {
-            resolvedWhere.full_name = { [Op.like]: `%${where.full_name}%` };
+            query += ' AND full_name LIKE :fullName';
+            replacements.fullName = `%${where.full_name}%`;
         }
 
-        return await usersModel.findAll({
-            where: resolvedWhere,
-            order: [['full_name', 'ASC']],
+        query += ' ORDER BY full_name ASC';
+
+        return await usersModel.sequelize.query(query, {
+            replacements,
+            type: usersModel.sequelize.QueryTypes.SELECT
         });
     }
 
@@ -54,8 +58,28 @@ class UsersService {
     // Tạo user mới
     async createUser(userData) {
         try {
-            // Để SQL Server tự xử lý DEFAULT CURRENT_TIMESTAMP
-            return await usersModel.create(userData);
+            const results = await usersModel.sequelize.query(
+                'EXEC sp_RegisterUser @Email = :email, @PasswordHash = :password_hash, @FullName = :full_name, @IsEmailVerified = :is_email_verified',
+                {
+                    replacements: {
+                        email: userData.email,
+                        password_hash: userData.password_hash || null,
+                        full_name: userData.full_name || null,
+                        is_email_verified: userData.is_email_verified ? 1 : 0,
+                    },
+                    type: usersModel.sequelize.QueryTypes.SELECT,
+                }
+            );
+
+            const newUserId = results[0].NewUserId;
+
+            return {
+                id: newUserId,
+                role: 'user',
+                full_name: userData.full_name,
+                email: userData.email,
+                avatar_url: null
+            };
         } catch (error) {
             console.error('DETAILED SIGNUP ERROR:', error);
             if (error.parent) {
@@ -85,9 +109,59 @@ class UsersService {
         const user = await usersModel.findByPk(userId);
         if (!user) throw new BadRequestError('User not found');
 
-        const updateData = getUpdateData(userData);
+        if (userData.password_hash) {
+            // Nếu có password_hash thì gọi SP sp_SetPassword
+            await usersModel.sequelize.query(
+                'EXEC sp_SetPassword ?, ?',
+                {
+                    replacements: [
+                        userId,
+                        userData.password_hash
+                    ],
+                    type: usersModel.sequelize.QueryTypes.RAW
+                }
+            );
+        } else {
+            // Ngược lại gọi SP sp_UpdateProfile
+            // Dùng || null để biến chuỗi rỗng '' thành NULL trước khi truyền vào SP
+            await usersModel.sequelize.query(
+                'EXEC sp_UpdateProfile ?, ?, ?, ?, ?, ?, ?, ?',
+                {
+                    replacements: [
+                        userId,
+                        userData.full_name || null,
+                        userData.bio || null,
+                        userData.avatar_url || null,
+                        userData.phone_number || null,
+                        userData.birthday || null,
+                        userData.gender || null,
+                        userData.status || null
+                    ],
+                    type: usersModel.sequelize.QueryTypes.RAW
+                }
+            );
+        }
 
-        return await user.update(updateData, options);
+        // Trả về user sau khi đã update
+        return await usersModel.findByPk(userId);
+    }
+
+    async updateUserStatus(userId, status) {
+        try {
+            await usersModel.sequelize.query(
+                'EXEC sp_UpdateUserStatus ?, ?',
+                {
+                    replacements: [
+                        userId,
+                        status
+                    ],
+                    type: usersModel.sequelize.QueryTypes.RAW
+                }
+            );
+            return { success: true };
+        } catch (error) {
+            throw error;
+        }
     }
 
     async setPassword(userId, password) {
@@ -119,13 +193,20 @@ class UsersService {
     // Xóa user (Soft Delete)
     async deleteUser(userId) {
         const user = await usersModel.findByPk(userId);
-        if (user) {
-            await user.update({
-                is_active: false
-            });
+        if (!user) return false;
+
+        try {
+            await usersModel.sequelize.query(
+                'EXEC sp_DeleteUser ?',
+                {
+                    replacements: [userId],
+                    type: usersModel.sequelize.QueryTypes.RAW
+                }
+            );
             return true;
+        } catch (error) {
+            throw error;
         }
-        return false;
     }
 }
 

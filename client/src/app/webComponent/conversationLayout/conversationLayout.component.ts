@@ -519,7 +519,7 @@ export class ConversationLayoutComponent implements OnInit, OnDestroy {
                     
                     this.socketService.emit('joinConversation', newConv.conv.id);
                     
-                    this.router.navigate(['/home/conversation', newConv.conv.id]);
+                    this.router.navigate(['/conversations', newConv.conv.id]);
                 }
                 this.closeCreateGroupModal();
             },
@@ -701,7 +701,7 @@ export class ConversationLayoutComponent implements OnInit, OnDestroy {
         this.exitSearch();
 
         if (item.is_group) {
-            this.router.navigate(['/home/conversation', item.id]);
+            this.router.navigate(['/conversations', item.id]);
         } else {
             this.openDirectConversationWithUser(item);
         }

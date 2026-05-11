@@ -47,6 +47,14 @@ const Conversation = sequelize.define('Conversation', {
         defaultValue: true,
         field: 'is_active'
     },
+    key_status: {
+        type: DataTypes.STRING(20),
+        defaultValue: 'no_key',
+        field: 'key_status',
+        validate: {
+            isIn: [['no_key', 'active', 'require_rotation']]
+        }
+    },
     created_at: {
         type: DataTypes.DATE,
         allowNull: true,

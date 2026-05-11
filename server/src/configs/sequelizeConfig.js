@@ -5,7 +5,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 
 // Cấu hình Sequelize cho SQL Server
 // Lắp ghép chuỗi kết nối theo định dạng URL (yêu cầu của Sequelize)
-const connectionString = `mssql://${process.env.DB_USER}:${process.env.DB_PASS}@${process.env.DB_HOST}/${process.env.DB_NAME}?instanceName=${process.env.DB_INSTANCE}&encrypt=false&trustServerCertificate=true`;
+const connectionString = `mssql://${process.env.DB_USER}:${process.env.DB_PASS}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}?encrypt=true&trustServerCertificate=true`;
 
 const sequelize = new Sequelize(
     connectionString,
@@ -15,7 +15,7 @@ const sequelize = new Sequelize(
         logging: false, // Tắt log truy vấn để terminal sạch hơn
         dialectOptions: {
             options: {
-                encrypt: false,
+                encrypt: true,
                 trustServerCertificate: true,
                 connectTimeout: 30000,
                 useUTC: false,

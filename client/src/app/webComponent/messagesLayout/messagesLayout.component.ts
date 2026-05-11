@@ -213,7 +213,7 @@ export class MessagesLayoutComponent implements OnInit, AfterViewInit, AfterView
     userBlock = computed(() => this.convStore.userBlock());
     userBlockService = inject(UserBlock);
     private relStore = inject(RelationshipStoreService);
-    
+
     currentConversation = computed(() => this.convStore.getConversationById(this.conversationId()));
     currentParticipant = computed(() => {
         const participants = this.currentConversation()?.participants || [];
@@ -244,8 +244,8 @@ export class MessagesLayoutComponent implements OnInit, AfterViewInit, AfterView
             other_participant:
                 conv.type === 'direct'
                     ? conv.participants.find(
-                          (p: any) => String(p.user_id) !== String(this.currentUserId()),
-                      )
+                        (p: any) => String(p.user_id) !== String(this.currentUserId()),
+                    )
                     : null,
         };
     });
@@ -298,7 +298,7 @@ export class MessagesLayoutComponent implements OnInit, AfterViewInit, AfterView
         replacedContent = replacedContent.replace(/&lt;i class="bi bi-pin-angle"&gt;&lt;\/i&gt;/g, '');
 
         let formatted = this.linkPreviewUtils.formatMessageText(replacedContent, participants);
-        
+
         // Bypass security nếu chứa icon để hiển thị được class bootstrap icon (đã được linkPreviewUtils unescape)
         if (typeof formatted === 'string' && formatted.includes('<i class="bi')) {
             return this.sanitizer.bypassSecurityTrustHtml(formatted);
@@ -878,9 +878,9 @@ export class MessagesLayoutComponent implements OnInit, AfterViewInit, AfterView
                         ...messageToAdd,
                         parent_message_info: messageToAdd.parent_message_info
                             ? {
-                                  ...messageToAdd.parent_message_info,
-                                  parent_message_id: messageToAdd.parent_message_id,
-                              }
+                                ...messageToAdd.parent_message_info,
+                                parent_message_id: messageToAdd.parent_message_id,
+                            }
                             : null,
                     };
 
@@ -1558,14 +1558,14 @@ export class MessagesLayoutComponent implements OnInit, AfterViewInit, AfterView
             parent_message_id: replyToMessageObj?.id || null,
             parent_message_info: replyToMessageObj
                 ? {
-                      parent_message_id: replyToMessageObj.id || null,
-                      parent_message_content: replyToMessageObj.content || null,
-                      parent_message_name: replyToMessageObj.sender_name || null,
-                      parent_message_is_deleted: replyToMessageObj.is_deleted || null,
-                      parent_message_sender_id: replyToMessageObj.sender_id || null,
-                      parent_message_type: replyToMessageObj.message_type || null,
-                      parent_message_thumbnail_url: replyToMessageObj.thumbnail_url || null,
-                  }
+                    parent_message_id: replyToMessageObj.id || null,
+                    parent_message_content: replyToMessageObj.content || null,
+                    parent_message_name: replyToMessageObj.sender_name || null,
+                    parent_message_is_deleted: replyToMessageObj.is_deleted || null,
+                    parent_message_sender_id: replyToMessageObj.sender_id || null,
+                    parent_message_type: replyToMessageObj.message_type || null,
+                    parent_message_thumbnail_url: replyToMessageObj.thumbnail_url || null,
+                }
                 : null,
         };
 
@@ -1593,99 +1593,99 @@ export class MessagesLayoutComponent implements OnInit, AfterViewInit, AfterView
         }
 
         const sendMessage$ = from(this.e2eeMessageService.encryptMessage(this.conversationId(), content)).pipe(
-                  concatMap((encrypted: any) => {
-                      return this.messagesService
-                          .postMessage(
-                              this.conversationId(),
-                              this.currentUserId(),
-                              encrypted.ciphertext,
-                              replyTo,
-                              messageType,
-                              file_metadata,
-                              { iv: encrypted.iv, keyVersion: encrypted.keyVersion },
-                          )
-                          .pipe(
-                              catchError((error) => {
-                                  // --- XỬ LÝ RETRY KHI LỆCH KEY VERSION ---
-                                  const errorCode = error?.error?.errorCode;
-                                  if (errorCode === E2EEErrorCode.SERVER_KEY_VERSION_MISMATCH) {
-                                      console.warn(
-                                          '[E2EE] Key version mismatch detected. Syncing and retrying...',
-                                      );
+            concatMap((encrypted: any) => {
+                return this.messagesService
+                    .postMessage(
+                        this.conversationId(),
+                        this.currentUserId(),
+                        encrypted.ciphertext,
+                        replyTo,
+                        messageType,
+                        file_metadata,
+                        { iv: encrypted.iv, keyVersion: encrypted.keyVersion },
+                    )
+                    .pipe(
+                        catchError((error) => {
+                            // --- XỬ LÝ RETRY KHI LỆCH KEY VERSION ---
+                            const errorCode = error?.error?.errorCode;
+                            if (errorCode === E2EEErrorCode.SERVER_KEY_VERSION_MISMATCH) {
+                                console.warn(
+                                    '[E2EE] Key version mismatch detected. Syncing and retrying...',
+                                );
 
-                                      // 1. Đồng bộ khóa mới nhất bằng hàm của bạn
-                                      return from(
-                                          this.keyManagementService.syncLatestConversationKey(
-                                              this.conversationId(),
-                                          ),
-                                      ).pipe(
-                                          switchMap(() =>
-                                              from(
-                                                  this.e2eeMessageService.encryptMessage(
-                                                      this.conversationId(),
-                                                      content,
-                                                  ),
-                                              ),
-                                          ),
-                                          switchMap((newEncrypted: any) => {
-                                              // 2. Gửi lại tin nhắn với khóa vừa đồng bộ
-                                              return this.messagesService.postMessage(
-                                                  this.conversationId(),
-                                                  this.currentUserId(),
-                                                  newEncrypted.ciphertext,
-                                                  replyTo,
-                                                  messageType,
-                                                  file_metadata,
-                                                  {
-                                                      iv: newEncrypted.iv,
-                                                      keyVersion: newEncrypted.keyVersion,
-                                                  },
-                                              );
-                                          }),
-                                      );
-                                  }
+                                // 1. Đồng bộ khóa mới nhất bằng hàm của bạn
+                                return from(
+                                    this.keyManagementService.syncLatestConversationKey(
+                                        this.conversationId(),
+                                    ),
+                                ).pipe(
+                                    switchMap(() =>
+                                        from(
+                                            this.e2eeMessageService.encryptMessage(
+                                                this.conversationId(),
+                                                content,
+                                            ),
+                                        ),
+                                    ),
+                                    switchMap((newEncrypted: any) => {
+                                        // 2. Gửi lại tin nhắn với khóa vừa đồng bộ
+                                        return this.messagesService.postMessage(
+                                            this.conversationId(),
+                                            this.currentUserId(),
+                                            newEncrypted.ciphertext,
+                                            replyTo,
+                                            messageType,
+                                            file_metadata,
+                                            {
+                                                iv: newEncrypted.iv,
+                                                keyVersion: newEncrypted.keyVersion,
+                                            },
+                                        );
+                                    }),
+                                );
+                            }
 
-                                  // --- XỬ LÝ RETRY KHI KEY CẦN XOAY (thành viên vào/rời nhóm) ---
-                                  if (errorCode === E2EEErrorCode.CONVERSATION_KEY_ROTATION_REQUIRED) {
-                                      console.warn(
-                                          '[E2EE] Key rotation required. Rotating and retrying...',
-                                      );
+                            // --- XỬ LÝ RETRY KHI KEY CẦN XOAY (thành viên vào/rời nhóm) ---
+                            if (errorCode === E2EEErrorCode.CONVERSATION_KEY_ROTATION_REQUIRED) {
+                                console.warn(
+                                    '[E2EE] Key rotation required. Rotating and retrying...',
+                                );
 
-                                      return from(
-                                          this.keyManagementService.rotateConversationKey(
-                                              this.conversationId(),
-                                          ),
-                                      ).pipe(
-                                          switchMap(() =>
-                                              from(
-                                                  this.e2eeMessageService.encryptMessage(
-                                                      this.conversationId(),
-                                                      content,
-                                                  ),
-                                              ),
-                                          ),
-                                          switchMap((newEncrypted: any) =>
-                                              this.messagesService.postMessage(
-                                                  this.conversationId(),
-                                                  this.currentUserId(),
-                                                  newEncrypted.ciphertext,
-                                                  replyTo,
-                                                  messageType,
-                                                  file_metadata,
-                                                  {
-                                                      iv: newEncrypted.iv,
-                                                      keyVersion: newEncrypted.keyVersion,
-                                                  },
-                                              ),
-                                          ),
-                                      );
-                                  }
+                                return from(
+                                    this.keyManagementService.rotateConversationKey(
+                                        this.conversationId(),
+                                    ),
+                                ).pipe(
+                                    switchMap(() =>
+                                        from(
+                                            this.e2eeMessageService.encryptMessage(
+                                                this.conversationId(),
+                                                content,
+                                            ),
+                                        ),
+                                    ),
+                                    switchMap((newEncrypted: any) =>
+                                        this.messagesService.postMessage(
+                                            this.conversationId(),
+                                            this.currentUserId(),
+                                            newEncrypted.ciphertext,
+                                            replyTo,
+                                            messageType,
+                                            file_metadata,
+                                            {
+                                                iv: newEncrypted.iv,
+                                                keyVersion: newEncrypted.keyVersion,
+                                            },
+                                        ),
+                                    ),
+                                );
+                            }
 
-                                  return throwError(() => error);
-                              }),
-                          );
-                  }),
-              );
+                            return throwError(() => error);
+                        }),
+                    );
+            }),
+        );
 
         return sendMessage$.pipe(
             tap({
@@ -2011,14 +2011,14 @@ export class MessagesLayoutComponent implements OnInit, AfterViewInit, AfterView
                     parent_message_id: replyToMessageObj?.id || null,
                     parent_message_info: replyToMessageObj
                         ? {
-                              parent_message_id: replyToMessageObj.id || null,
-                              parent_message_content: replyToMessageObj.content || null,
-                              parent_message_name: replyToMessageObj.sender_name || null,
-                              parent_message_is_deleted: replyToMessageObj.is_deleted || null,
-                              parent_message_sender_id: replyToMessageObj.sender_id || null,
-                              parent_message_type: replyToMessageObj.message_type || null,
-                              parent_message_thumbnail_url: replyToMessageObj.thumbnail_url || null,
-                          }
+                            parent_message_id: replyToMessageObj.id || null,
+                            parent_message_content: replyToMessageObj.content || null,
+                            parent_message_name: replyToMessageObj.sender_name || null,
+                            parent_message_is_deleted: replyToMessageObj.is_deleted || null,
+                            parent_message_sender_id: replyToMessageObj.sender_id || null,
+                            parent_message_type: replyToMessageObj.message_type || null,
+                            parent_message_thumbnail_url: replyToMessageObj.thumbnail_url || null,
+                        }
                         : null,
                 },
                 this.conversationId(),
@@ -2085,12 +2085,12 @@ export class MessagesLayoutComponent implements OnInit, AfterViewInit, AfterView
             this.loading = false;
             const linkMetadata = linkPreview
                 ? {
-                      file_url: linkPreview.url,
-                      thumbnail_url: linkPreview.image,
-                      file_name: linkPreview.title,
-                      link_description: linkPreview.description,
-                      has_link: true,
-                  }
+                    file_url: linkPreview.url,
+                    thumbnail_url: linkPreview.image,
+                    file_name: linkPreview.title,
+                    link_description: linkPreview.description,
+                    has_link: true,
+                }
                 : undefined;
 
             this.postAndBroadcastMessage(
@@ -2918,8 +2918,8 @@ export class MessagesLayoutComponent implements OnInit, AfterViewInit, AfterView
                     // Broadcast cho người khác trong conversation
                     this.socketService.emit('pinMessage', newPinMessage);
 
-                const messageContent = `@[${this.currentUserId()}] đã ghim tin nhắn: ${this.pinnedMessagePreviewText(newPinMessage)}`;
-                const message_type = 'system';
+                    const messageContent = `@[${this.currentUserId()}] đã ghim tin nhắn: ${this.pinnedMessagePreviewText(newPinMessage)}`;
+                    const message_type = 'system';
 
                     this.postAndBroadcastMessage(messageContent, message_type);
                 },
@@ -3358,9 +3358,9 @@ export class MessagesLayoutComponent implements OnInit, AfterViewInit, AfterView
         if (!infor?.participants || infor.participants.length > 2) return false;
         const parti = infor.participants.find((p: any) => String(p.user_id) !== String(this.currentUserId()));
         if (!parti) return false;
-        
+
         const currentUserId = this.currentUserId();
-        return this.userBlock()?.some((block: any) => 
+        return this.userBlock()?.some((block: any) =>
             String(block.blocked_id) === String(parti.user_id) && String(block.blocker_id) === String(currentUserId)
         ) ?? false;
     }
@@ -3370,9 +3370,9 @@ export class MessagesLayoutComponent implements OnInit, AfterViewInit, AfterView
         if (!infor?.participants || infor.participants.length > 2) return false;
         const parti = infor.participants.find((p: any) => String(p.user_id) !== String(this.currentUserId()));
         if (!parti) return false;
-        
+
         const currentUserId = this.currentUserId();
-        return this.userBlock()?.some((block: any) => 
+        return this.userBlock()?.some((block: any) =>
             String(block.blocker_id) === String(parti.user_id) && String(block.blocked_id) === String(currentUserId)
         ) ?? false;
     }
@@ -3389,17 +3389,17 @@ export class MessagesLayoutComponent implements OnInit, AfterViewInit, AfterView
             console.log('[unblockCurrentUser] Không tìm thấy đối phương');
             return;
         }
-        
+
         const full_name = parti.nick_name || infor.title || 'Người dùng';
         const currentUserId = this.currentUserId();
-        const block = this.userBlock()?.find((b: any) => 
+        const block = this.userBlock()?.find((b: any) =>
             String(b.blocked_id) === String(parti.user_id) && String(b.blocker_id) === String(currentUserId)
         );
-        
+
         console.log('[unblockCurrentUser] parti:', parti.user_id, 'currentUserId:', currentUserId);
         console.log('[unblockCurrentUser] userBlock list:', this.userBlock());
         console.log('[unblockCurrentUser] found block:', block);
-        
+
         if (!block?.id) {
             console.log('[unblockCurrentUser] Không tìm thấy block record hoặc không có ID');
             return;
@@ -3470,7 +3470,7 @@ export class MessagesLayoutComponent implements OnInit, AfterViewInit, AfterView
                         isGroup: true,
                         avatarUrl:
                             this.getMessageInfor().avatar_url &&
-                            this.getMessageInfor().avatar_url.trim()
+                                this.getMessageInfor().avatar_url.trim()
                                 ? this.getMessageInfor().avatar_url
                                 : null,
                         members: this.getMessageInfor().participants ?? [],

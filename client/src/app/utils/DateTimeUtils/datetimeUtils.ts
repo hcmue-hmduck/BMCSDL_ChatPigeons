@@ -76,7 +76,7 @@ export class DateTimeUtils {
 
     formatPostTime(dateValue: string | null | undefined): string {
         if (!dateValue) return 'Vừa xong';
-        
+
         const date = new Date(dateValue);
         if (Number.isNaN(date.getTime())) return 'Vừa xong';
 
@@ -108,7 +108,7 @@ export class DateTimeUtils {
         if (!isRelative) {
             this.postTimeCache.set(dateValue, result);
         }
-        
+
         return result;
     }
 
@@ -119,7 +119,21 @@ export class DateTimeUtils {
     }
 
     private normalizeIsoString(str: string): string {
-        if (str.endsWith('Z') || str.length !== 23) return str;
-        return str.replace(' ', 'T') + 'Z';
+        let normalized = str;
+
+        // 1. Xóa chữ Z ở cuối (Vì Server gửi về Z khiến trình duyệt cộng thêm 7 tiếng)
+        if (normalized.endsWith('Z')) {
+            normalized = normalized.slice(0, -1);
+        }
+
+        // 2. Xóa đuôi +00:00 (Nếu DB gửi thẳng chuỗi gốc)
+        if (normalized.includes('+00:00')) {
+            normalized = normalized.replace(' +00:00', '').replace('+00:00', '');
+        }
+
+        // 3. Đảm bảo có chữ T ở giữa ngày và giờ (Chuẩn ISO 8601 không có Z sẽ được hiểu là Local Time)
+        normalized = normalized.replace(' ', 'T');
+
+        return normalized;
     }
 }

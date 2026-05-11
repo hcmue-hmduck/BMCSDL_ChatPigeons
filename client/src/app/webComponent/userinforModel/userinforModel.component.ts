@@ -194,6 +194,12 @@ export class UserInforModel {
                     timer: 2000,
                     showConfirmButton: false
                 });
+                
+                // Cập nhật state tại chỗ để UI đổi sang nút "Đổi mật khẩu"
+                const updatedData = { ...this.userInfo(), hasPassword: true };
+                this.userInfo.set(updatedData);
+                this.authService.updateLocalUser(updatedData);
+                
                 this.toggleSetPassword(); // Đóng form lại
                 this.setPasswordForm.reset();
             },

@@ -4,16 +4,27 @@ const usersModel = require('../models/usersModel');
 class FriendsService {
     async getFriendByUserId(userId) {
         try {
-            return await friendsModel.findAll({
-                where: {
-                    user_id: userId
-                },
-                include: [{
-                    model: usersModel,
-                    as: 'friend',
-                    attributes: ['id', 'full_name', 'avatar_url', 'status']
-                }]
-            })
+            const results = await friendsModel.sequelize.query(
+                'SELECT * FROM vw_GetFriends WHERE user_id = :userId',
+                {
+                    replacements: { userId },
+                    type: friendsModel.sequelize.QueryTypes.SELECT
+                }
+            );
+
+            return results.map(r => ({
+                user_id: r.user_id,
+                friend_id: r.friend_id,
+                notes: r.notes,
+                is_favorite: r.is_favorite,
+                friendship_date: r.friendship_date,
+                friend: {
+                    id: r.friend_id,
+                    full_name: r.friend_name,
+                    avatar_url: r.friend_avatar,
+                    status: r.friend_status
+                }
+            }));
         }
         catch (error) {
             throw error;
@@ -22,20 +33,19 @@ class FriendsService {
 
     async createFriendByUserId(userId, friend_id, is_favorite, notes) {
         try {
-            const userReq = await friendsModel.create({
-                user_id: userId,
-                friend_id: friend_id,
-                is_favorite: is_favorite,
-                notes: notes
-            });
-
-            const otherReq = await friendsModel.create({
-                user_id: friend_id,
-                friend_id: userId,
-                is_favorite: is_favorite,
-                notes: notes
-            });
-            return { userReq, otherReq };
+            await friendsModel.sequelize.query(
+                'EXEC sp_AddFriend ?, ?, ?, ?',
+                {
+                    replacements: [
+                        userId,
+                        friend_id,
+                        is_favorite ? 1 : 0,
+                        notes || null
+                    ],
+                    type: friendsModel.sequelize.QueryTypes.RAW
+                }
+            );
+            return { message: 'Thêm bạn bè thành công' };
         } catch (error) {
             throw error;
         }
@@ -43,20 +53,18 @@ class FriendsService {
 
     async deleteFriendByUserId(userId, friend_id) {
         try {
-            const userReq = await friendsModel.destroy({
-                where: {
-                    user_id: userId,
-                    friend_id: friend_id
+            await friendsModel.sequelize.query(
+                'EXEC sp_DeleteFriend ?, ?',
+                {
+                    replacements: [
+                        userId,
+                        friend_id
+                    ],
+                    type: friendsModel.sequelize.QueryTypes.RAW
                 }
-            });
-
-            const otherReq = await friendsModel.destroy({
-                where: {
-                    user_id: friend_id,
-                    friend_id: userId
-                }
-            });
-            return { userReq, otherReq };
+            );
+            // Trả về kết quả giả lập thành công vì SP không return số dòng xóa
+            return { userReq: 1, otherReq: 1 };
         } catch (error) {
             throw error;
         }

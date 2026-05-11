@@ -9,15 +9,24 @@ class E2EEService {
         if (!user_id || !public_key || !wrapped_private_key || !kek_iv || !pin_salt)
             throw new BadRequestError('missing parameters');
 
-        const foundUser = await userModel.findByPk(user_id);
-        if (!foundUser) throw BadRequestError('user not found');
-
-        return await foundUser.update({
-            public_key,
-            wrapped_private_key,
-            kek_iv,
-            pin_salt,
-        });
+        try {
+            await userModel.sequelize.query(
+                'EXEC sp_SetupE2EEKeys ?, ?, ?, ?, ?',
+                {
+                    replacements: [
+                        user_id,
+                        public_key,
+                        wrapped_private_key,
+                        kek_iv,
+                        pin_salt
+                    ],
+                    type: userModel.sequelize.QueryTypes.RAW
+                }
+            );
+            return { success: true };
+        } catch (error) {
+            throw error;
+        }
     }
 
     async checkStatus(user_id) {
@@ -94,23 +103,23 @@ class E2EEService {
             });
         });
 
-        const { conversation_id, key_version } = conversation_key_vaults[0];
-
-        const latestConvKey = await this.getLatestConversationKey(user_id, conversation_id, false);
-
-        const latestKeyVersion = latestConvKey?.key_version ? latestConvKey.key_version : 0;
-
-        if (key_version !== latestKeyVersion + 1) {
-            throw new BadRequestError(
-                `Keys for version ${key_version} invalid in this conversation.`,
-                undefined,
-                E2EEErrorCode.SERVER_KEY_VERSION_MISMATCH,
+        // Gọi Stored Procedure cho từng vault entry
+        for (const vault of conversation_key_vaults) {
+            await conversationKeysVaultModel.sequelize.query(
+                'EXEC sp_AddConversationKey ?, ?, ?, ?',
+                {
+                    replacements: [
+                        vault.user_id,
+                        vault.conversation_id,
+                        vault.wrapped_shared_key,
+                        vault.key_version
+                    ],
+                    type: conversationKeysVaultModel.sequelize.QueryTypes.RAW
+                }
             );
         }
 
-        const result = await conversationKeysVaultModel.bulkCreate(conversation_key_vaults);
-        await conversationsService.updateKeyStatus(conversation_id,  'active');
-        return result;
+        return { success: true, count: conversation_key_vaults.length };
     }
 
     async getConversationKey(user_id, conversation_id, key_version) {
