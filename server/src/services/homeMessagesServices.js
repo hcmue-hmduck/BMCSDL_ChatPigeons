@@ -5,6 +5,7 @@ const messageReactionService = require('./message_reactionsService');
 const usersService = require('./usersService');
 const linkpreviewService = require('./linkpreviewService');
 const participantsService = require('./participantsService.js');
+const oneSignalService = require('./oneSignalService');
 const { BadRequestError, E2EEErrorCode } = require('../core/errorResponse.js');
 
 const e2eeService = require('./E2EEService');
@@ -296,6 +297,27 @@ class HomeMessagesService {
                   parent_message_thumbnail_url: parentMessage.thumbnail_url,
               }
             : null;
+
+        // --- SEND PUSH NOTIFICATION ---
+        (async () => {
+            try {
+                const participants = await participantsService.getParticipantByConversationId(conversationId);
+                const sender = await usersService.getUserById(senderId);
+
+                if (participants && participants.length > 0) {
+                    await oneSignalService.sendMessageNotification(
+                        participants,
+                        senderId,
+                        sender ? sender.full_name : 'Someone',
+                        content,
+                        sender
+                    );
+                }
+            } catch (error) {
+                console.error('[HomeMessagesService] Error sending notification:', error.message);
+                // Don't fail the message creation if notification fails
+            }
+        })();
 
         return {
             ...newMessage.dataValues,
