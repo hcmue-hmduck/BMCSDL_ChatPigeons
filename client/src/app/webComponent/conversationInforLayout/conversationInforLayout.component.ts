@@ -1143,7 +1143,8 @@ export class ConversationInfoLayoutComponent implements OnInit, OnDestroy, OnCha
             },
             error: (err) => {
                 console.error('Failed to add members API call:', err);
-                this.addMemberError = 'Gặp lỗi khi thêm thành viên. Vui lòng thử lại.';
+                const serverMessage = err?.error?.message;
+                this.addMemberError = serverMessage || 'Gặp lỗi khi thêm thành viên. Vui lòng thử lại.';
                 this.isAddingMembers = false;
                 this.cdr.detectChanges();
             }

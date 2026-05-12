@@ -255,7 +255,7 @@ BEGIN
 
     IF @InviterRole IS NULL OR @InviterRole NOT IN ('owner', 'admin')
     BEGIN
-        RAISERROR(N'Bạn không có quyền thêm thành viên vào nhóm này. Chỉ Admin hoặc Owner mới có quyền.', 16, 1);
+        RAISERROR(N'Chỉ Trưởng nhóm hoặc Phó nhóm mới có quyền thêm thành viên vào nhóm này.', 16, 1);
         RETURN;
     END
 

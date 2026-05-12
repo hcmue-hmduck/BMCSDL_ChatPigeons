@@ -4,6 +4,13 @@ const participantsModel = require('../models/participantsModel');
 const conversationsService = require('./conversationsService');
 
 class ParticipantsService {
+    getDbErrorMessage(error) {
+        if (!error) return 'Database error';
+        if (error.original && error.original.message) return error.original.message;
+        if (error.parent && error.parent.message) return error.parent.message;
+        return error.message || 'Database error';
+    }
+
     // Lấy participants theo điều kiện filter (where object)
     async getAllParticipants(where = {}) {
         if (where.conversation_id) {
@@ -80,27 +87,31 @@ class ParticipantsService {
      * @param {boolean} requireRotation - Nếu true, cập nhật key_status = 'require_rotation' sau khi thêm
      */
     async createParticipant(conversation_id, participantData, requireRotation = false) {
-        const { user_id, inviterId } = participantData;
+        const { user_id, inviterId, role } = participantData;
         if (!conversation_id || !user_id) throw new BadRequestError('params invalid');
 
         // Nếu có người mời (inviterId), dùng SP để thêm thành viên và kiểm tra quyền
         if (inviterId) {
-            await participantsModel.sequelize.query(
-                'EXEC sp_AddGroupMember ?, ?, ?',
-                {
-                    replacements: [
-                        conversation_id,
-                        user_id,
-                        inviterId
-                    ],
-                    type: participantsModel.sequelize.QueryTypes.RAW
-                }
-            );
+            try {
+                await participantsModel.sequelize.query(
+                    'EXEC sp_AddGroupMember ?, ?, ?',
+                    {
+                        replacements: [
+                            conversation_id,
+                            user_id,
+                            inviterId
+                        ],
+                        type: participantsModel.sequelize.QueryTypes.RAW
+                    }
+                );
+            } catch (error) {
+                throw new BadRequestError(this.getDbErrorMessage(error));
+            }
             return await participantsModel.findOne({
                 where: { conversation_id, user_id }
             });
         }
-
+        
         // Kiểm tra xem có trường nào khác ngoài user_id và role không (SP chỉ hỗ trợ 2 trường này)
         const supportedFields = ['user_id', 'role'];
         const dataKeys = Object.keys(participantData).filter(k => k !== 'inviterId');
@@ -108,17 +119,21 @@ class ParticipantsService {
 
         let participant;
         if (canUseSP) {
-            await participantsModel.sequelize.query(
-                'EXEC sp_CreateParticipant ?, ?, ?',
-                {
-                    replacements: [
-                        conversation_id,
-                        user_id,
-                        role || 'member'
-                    ],
-                    type: participantsModel.sequelize.QueryTypes.RAW
-                }
-            );
+            try {
+                await participantsModel.sequelize.query(
+                    'EXEC sp_CreateParticipant ?, ?, ?',
+                    {
+                        replacements: [
+                            conversation_id,
+                            user_id,
+                            role || 'member'
+                        ],
+                        type: participantsModel.sequelize.QueryTypes.RAW
+                    }
+                );
+            } catch (error) {
+                throw new BadRequestError(this.getDbErrorMessage(error));
+            }
             participant = await participantsModel.findOne({
                 where: { conversation_id, user_id }
             });
