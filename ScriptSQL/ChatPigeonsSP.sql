@@ -1157,9 +1157,9 @@ BEGIN
 
     SET @LatestKeyVersion = ISNULL(@LatestKeyVersion, 0);
 
-    IF @KeyVersion <> @LatestKeyVersion + 1
+    IF @KeyVersion <= @LatestKeyVersion
     BEGIN
-        RAISERROR(N'Key version không hợp lệ. Phải là version tiếp theo.', 16, 1);
+        RAISERROR(N'Key version không hợp lệ. Phải lớn hơn version hiện tại.', 16, 1);
         RETURN;
     END
 
