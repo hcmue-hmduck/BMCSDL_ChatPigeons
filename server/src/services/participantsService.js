@@ -111,7 +111,7 @@ class ParticipantsService {
                 where: { conversation_id, user_id }
             });
         }
-        
+
         // Kiểm tra xem có trường nào khác ngoài user_id và role không (SP chỉ hỗ trợ 2 trường này)
         const supportedFields = ['user_id', 'role'];
         const dataKeys = Object.keys(participantData).filter(k => k !== 'inviterId');
@@ -119,21 +119,18 @@ class ParticipantsService {
 
         let participant;
         if (canUseSP) {
-            try {
-                await participantsModel.sequelize.query(
-                    'EXEC sp_CreateParticipant ?, ?, ?',
-                    {
-                        replacements: [
-                            conversation_id,
-                            user_id,
-                            role || 'member'
-                        ],
-                        type: participantsModel.sequelize.QueryTypes.RAW
-                    }
-                );
-            } catch (error) {
-                throw new BadRequestError(this.getDbErrorMessage(error));
-            }
+            await participantsModel.sequelize.query(
+                'EXEC sp_CreateParticipant ?, ?, ?',
+                {
+                    replacements: [
+                        conversation_id,
+                        user_id,
+                        participantData.role || 'member'
+                    ],
+                    type: participantsModel.sequelize.QueryTypes.RAW
+                }
+            );
+
             participant = await participantsModel.findOne({
                 where: { conversation_id, user_id }
             });
