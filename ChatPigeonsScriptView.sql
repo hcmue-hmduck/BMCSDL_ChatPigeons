@@ -1,3 +1,6 @@
+USE ChatPigeons;
+GO
+
 -- =====================================================
 -- VIEW: vw_GetConversations
 -- =====================================================
@@ -379,4 +382,26 @@ FROM conversations c
 LEFT JOIN messages m ON c.last_message_id = m.id
 LEFT JOIN users u ON m.sender_id = u.id
 WHERE c.is_active = 1;
+GO
+
+-- =====================================================
+-- GRANT SELECT FOR AppRole
+-- =====================================================
+GRANT SELECT ON dbo.vw_GetConversations TO AppRole;
+GRANT SELECT ON dbo.vw_GetMessages TO AppRole;
+GRANT SELECT ON dbo.vw_GetUnreadMessages TO AppRole;
+GRANT SELECT ON dbo.vw_CountUnreadMessages TO AppRole;
+GRANT SELECT ON dbo.vw_GetHomeMessagesMedia TO AppRole;
+GRANT SELECT ON dbo.vw_GetFriendRequests TO AppRole;
+GRANT SELECT ON dbo.vw_GetSentFriendRequests TO AppRole;
+GRANT SELECT ON dbo.vw_GetFriends TO AppRole;
+GRANT SELECT ON dbo.vw_GetMessageReactions TO AppRole;
+GRANT SELECT ON dbo.vw_GetPinnedMessages TO AppRole;
+GRANT SELECT ON dbo.vw_GetParticipants TO AppRole;
+GRANT SELECT ON dbo.vw_GetBlockedUsers TO AppRole;
+GRANT SELECT ON dbo.vw_SearchUsersAndGroups TO AppRole;
+GRANT SELECT ON dbo.vw_GetUsersByIds TO AppRole;
+GRANT SELECT ON dbo.vw_GetMessagesWithSender TO AppRole;
+GRANT SELECT ON dbo.vw_GetMessagesWithCalls TO AppRole;
+GRANT SELECT ON dbo.vw_GetConversationsWithLastMessage TO AppRole;
 GO

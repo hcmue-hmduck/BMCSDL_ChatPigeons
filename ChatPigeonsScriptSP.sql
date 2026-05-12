@@ -1,3 +1,6 @@
+USE ChatPigeons;
+GO
+
 -- =====================================================
 -- STORED PROCEDURE: sp_RegisterUser
 -- =====================================================
@@ -17,6 +20,7 @@ BEGIN
 
     SELECT @NewUserId AS NewUserId;
 END
+GO
 
 EXECUTE sp_RegisterUser 'ducgaming@gmail.com', 'E10ADC3949BA59ABBE56E057F20F883E';
 GO
@@ -70,6 +74,7 @@ BEGIN
         updated_at = CURRENT_TIMESTAMP
     WHERE id = @UserId;
 END
+GO
 
 EXEC sp_UpdateProfile
     @UserId = '96DC9456-871C-4A7B-8BE0-67458102D1DB',
@@ -1334,6 +1339,7 @@ BEGIN
         RAISERROR(N'Không tìm thấy người dùng.', 16, 1);
     END
 END
+GO
 
 EXEC sp_AdminLockAccount 'CFD79C8E-ED3E-4572-9247-44E2AAB84885';
 GO
@@ -1357,6 +1363,7 @@ BEGIN
         RAISERROR(N'Không tìm thấy người dùng.', 16, 1);
     END
 END
+GO
 
 EXEC sp_AdminUnlockAccount 'CFD79C8E-ED3E-4572-9247-44E2AAB84885';
 GO
@@ -1381,6 +1388,7 @@ BEGIN
         RAISERROR(N'Không tìm thấy cuộc trò chuyện.', 16, 1);
     END
 END
+GO
 
 EXEC sp_DeleteConversation '98F1CB17-AE0C-4B5A-8CAD-C10D7C817FDE';
 GO
@@ -1410,6 +1418,48 @@ BEGIN
     SELECT @NewCallId AS NewCallId;
 END
 
+GO
+
+-- =====================================================
+-- GRANT EXECUTE FOR AppRole
+-- =====================================================
+GRANT EXECUTE ON dbo.sp_RegisterUser TO AppRole;
+GRANT EXECUTE ON dbo.sp_SetPassword TO AppRole;
+GRANT EXECUTE ON dbo.sp_UpdateProfile TO AppRole;
+GRANT EXECUTE ON dbo.sp_SendMessage TO AppRole;
+GRANT EXECUTE ON dbo.sp_EditMessage TO AppRole;
+GRANT EXECUTE ON dbo.sp_RevokeMessage TO AppRole;
+GRANT EXECUTE ON dbo.sp_CreateGroupConversation TO AppRole;
+GRANT EXECUTE ON dbo.sp_AddGroupMember TO AppRole;
+GRANT EXECUTE ON dbo.sp_KickGroupMember TO AppRole;
+GRANT EXECUTE ON dbo.sp_ChangeMemberRole TO AppRole;
+GRANT EXECUTE ON dbo.sp_PinMessage TO AppRole;
+GRANT EXECUTE ON dbo.sp_UnpinMessage TO AppRole;
+GRANT EXECUTE ON dbo.sp_BlockUser TO AppRole;
+GRANT EXECUTE ON dbo.sp_CreateDirectConversation TO AppRole;
+GRANT EXECUTE ON dbo.sp_UpdateConversation TO AppRole;
+GRANT EXECUTE ON dbo.sp_CreateParticipant TO AppRole;
+GRANT EXECUTE ON dbo.sp_CreateFriendRequest TO AppRole;
+GRANT EXECUTE ON dbo.sp_UpdateFriendRequestStatus TO AppRole;
+GRANT EXECUTE ON dbo.sp_DeleteFriend TO AppRole;
+GRANT EXECUTE ON dbo.sp_AddMessageReaction TO AppRole;
+GRANT EXECUTE ON dbo.sp_RemoveMessageReaction TO AppRole;
+GRANT EXECUTE ON dbo.sp_UpdateParticipant TO AppRole;
+GRANT EXECUTE ON dbo.sp_UnblockUser TO AppRole;
+GRANT EXECUTE ON dbo.sp_UpdateUserStatus TO AppRole;
+GRANT EXECUTE ON dbo.sp_LeaveConversation TO AppRole;
+GRANT EXECUTE ON dbo.sp_UpdateKeyStatus TO AppRole;
+GRANT EXECUTE ON dbo.sp_AddFriend TO AppRole;
+GRANT EXECUTE ON dbo.sp_DeleteUser TO AppRole;
+GRANT EXECUTE ON dbo.sp_SetupE2EEKeys TO AppRole;
+GRANT EXECUTE ON dbo.sp_AddConversationKey TO AppRole;
+GRANT EXECUTE ON dbo.sp_StartCall TO AppRole;
+GRANT EXECUTE ON dbo.sp_UpdateCallStatus TO AppRole;
+GRANT EXECUTE ON dbo.sp_InitCall TO AppRole;
+GRANT EXECUTE ON dbo.sp_AdminLockAccount TO AppRole;
+GRANT EXECUTE ON dbo.sp_AdminUnlockAccount TO AppRole;
+GRANT EXECUTE ON dbo.sp_DeleteConversation TO AppRole;
+GRANT EXECUTE ON dbo.sp_LogCallHistory TO AppRole;
 GO
 
 

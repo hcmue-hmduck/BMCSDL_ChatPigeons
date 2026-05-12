@@ -9,25 +9,7 @@ GO
 USE ChatPigeons;
 GO
 
--- 2. Dọn dẹp các bảng cũ nếu cần (Xóa chú thích -- nếu muốn reset database)
-/*
-IF OBJECT_ID('dbo.GroupJoinRequests', 'U') IS NOT NULL DROP TABLE dbo.GroupJoinRequests;
-IF OBJECT_ID('dbo.message_reactions', 'U') IS NOT NULL DROP TABLE dbo.message_reactions;
-IF OBJECT_ID('dbo.emojis', 'U') IS NOT NULL DROP TABLE dbo.emojis;
-IF OBJECT_ID('dbo.friends', 'U') IS NOT NULL DROP TABLE dbo.friends;
-IF OBJECT_ID('dbo.userblocks', 'U') IS NOT NULL DROP TABLE dbo.userblocks;
-IF OBJECT_ID('dbo.friendrequests', 'U') IS NOT NULL DROP TABLE dbo.friendrequests;
-IF OBJECT_ID('dbo.pinnedmessages', 'U') IS NOT NULL DROP TABLE dbo.pinnedmessages;
-IF OBJECT_ID('dbo.conversationkeysvault', 'U') IS NOT NULL DROP TABLE dbo.conversationkeysvault;
-IF OBJECT_ID('dbo.messages', 'U') IS NOT NULL DROP TABLE dbo.messages;
-IF OBJECT_ID('dbo.calls', 'U') IS NOT NULL DROP TABLE dbo.calls;
-IF OBJECT_ID('dbo.participants', 'U') IS NOT NULL DROP TABLE dbo.participants;
-IF OBJECT_ID('dbo.conversations', 'U') IS NOT NULL DROP TABLE dbo.conversations;
-IF OBJECT_ID('dbo.users', 'U') IS NOT NULL DROP TABLE dbo.users;
-*/
-GO
-
--- 3. Bảng users
+-- 2. Bảng users
 CREATE TABLE users (
     id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
     email VARCHAR(100) NOT NULL UNIQUE,
@@ -53,7 +35,7 @@ CREATE TABLE users (
 );
 GO
 
--- 4. Bảng conversations
+-- 3. Bảng conversations
 CREATE TABLE conversations (
     id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
     conversation_type VARCHAR(20) NOT NULL DEFAULT 'direct' CHECK (conversation_type IN ('direct', 'group')),
@@ -63,12 +45,13 @@ CREATE TABLE conversations (
     last_message_id UNIQUEIDENTIFIER,
     last_message_at DATETIMEOFFSET,
     is_active BIT DEFAULT 1,
+    key_status VARCHAR(20) NOT NULL DEFAULT 'no_key' CHECK (key_status IN ('no_key', 'active', 'require_rotation')),
     created_at DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET() NOT NULL,
     updated_at DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET()
 );
 GO
 
--- 5. Bảng participants
+-- 4. Bảng participants
 CREATE TABLE participants (
     id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
     conversation_id UNIQUEIDENTIFIER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
@@ -86,7 +69,7 @@ CREATE TABLE participants (
 );
 GO
 
--- 6. Bảng calls
+-- 5. Bảng calls
 CREATE TABLE calls (
     id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
     conversation_id UNIQUEIDENTIFIER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
@@ -102,7 +85,7 @@ CREATE TABLE calls (
 );
 GO
 
--- 7. Bảng messages
+-- 6. Bảng messages
 CREATE TABLE messages (
     id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
     conversation_id UNIQUEIDENTIFIER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
@@ -129,7 +112,7 @@ CREATE TABLE messages (
 );
 GO
 
--- 8. Bảng conversationkeysvault
+-- 7. Bảng conversationkeysvault
 CREATE TABLE conversationkeysvault (
     id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
     user_id UNIQUEIDENTIFIER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -141,7 +124,7 @@ CREATE TABLE conversationkeysvault (
 );
 GO
 
--- 9. Bảng pinnedmessages
+-- 8. Bảng pinnedmessages
 CREATE TABLE pinnedmessages (
     id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
     message_id UNIQUEIDENTIFIER NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
@@ -157,7 +140,7 @@ CREATE TABLE pinnedmessages (
 );
 GO
 
--- 10. Bảng friendrequests
+-- 9. Bảng friendrequests
 CREATE TABLE friendrequests (
     id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
     sender_id UNIQUEIDENTIFIER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -170,7 +153,7 @@ CREATE TABLE friendrequests (
 );
 GO
 
--- 11. Bảng userblocks
+-- 10. Bảng userblocks
 CREATE TABLE userblocks (
     id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
     blocker_id UNIQUEIDENTIFIER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -182,7 +165,7 @@ CREATE TABLE userblocks (
 );
 GO
 
--- 12. Bảng friends
+-- 11. Bảng friends
 CREATE TABLE friends (
     id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
     user_id UNIQUEIDENTIFIER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -196,7 +179,7 @@ CREATE TABLE friends (
 );
 GO
 
--- 13. Bảng emojis
+-- 12. Bảng emojis
 CREATE TABLE emojis (
     id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
     unicode_char NVARCHAR(10) NOT NULL,
@@ -210,7 +193,7 @@ CREATE TABLE emojis (
 );
 GO
 
--- 14. Bảng message_reactions
+-- 13. Bảng message_reactions
 CREATE TABLE message_reactions (
     id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
     conversation_id UNIQUEIDENTIFIER NOT NULL REFERENCES conversations(id) ON DELETE NO ACTION,
@@ -223,7 +206,7 @@ CREATE TABLE message_reactions (
 );
 GO
 
--- 15. Bảng GroupJoinRequests
+-- 14. Bảng GroupJoinRequests
 CREATE TABLE GroupJoinRequests (
     id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
     user_id UNIQUEIDENTIFIER NOT NULL REFERENCES users(id) ON DELETE NO ACTION,
@@ -236,12 +219,12 @@ CREATE TABLE GroupJoinRequests (
 );
 GO
 
--- 16. Foreign Key bổ sung
+-- 15. Foreign Key bổ sung
 ALTER TABLE conversations
 ADD CONSTRAINT fk_conv_last_msg FOREIGN KEY (last_message_id) REFERENCES messages(id) ON DELETE NO ACTION;
 GO
 
--- 17. TRIGGER TỰ ĐỘNG CẬP NHẬT updated_at (CHỈ DÀNH CHO SQL SERVER)
+-- 16. TRIGGER TỰ ĐỘNG CẬP NHẬT updated_at (CHỈ DÀNH CHO SQL SERVER)
 
 CREATE TRIGGER trg_UpdateUsersUpdatedAt ON users AFTER UPDATE AS
 BEGIN
@@ -319,4 +302,25 @@ CREATE TRIGGER trg_UpdateMessageReactionsUpdatedAt ON message_reactions AFTER UP
 BEGIN
     UPDATE message_reactions SET updated_at = SYSDATETIMEOFFSET() FROM message_reactions INNER JOIN inserted i ON message_reactions.id = i.id;
 END;
+GO
+
+-- 17. Tạo login AppRole
+USE master;
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.server_principals WHERE name = 'AppLogin')
+BEGIN
+    CREATE LOGIN AppLogin WITH PASSWORD = 'YourStrongPassword123';
+END
+GO
+
+USE ChatPigeons;
+GO
+
+CREATE USER AppUser FOR LOGIN AppLogin;
+GO
+
+CREATE ROLE AppRole;
+GO
+ALTER ROLE AppRole ADD MEMBER AppUser;
 GO
