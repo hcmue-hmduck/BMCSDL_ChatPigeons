@@ -133,9 +133,19 @@ export class HomeLayoutComponent implements OnInit {
             },
             error: (error) => {
                 console.error(error.error);
-                if (error.statusText === 'Unauthorized')
+                const serverMessage =
+                    error?.error?.message ||
+                    error?.error?.error?.message ||
+                    '';
+                if (serverMessage === 'account is locked') {
+                    this.loginErrorMessage.set('Tài khoản đã bị khóa');
+                    return;
+                }
+                if (error.statusText === 'Unauthorized' || error.status === 401) {
                     this.loginErrorMessage.set('Tài khoản hoặc mật khẩu không chính xác');
-                else this.loginErrorMessage.set('Đăng nhập thất bại');
+                    return;
+                }
+                this.loginErrorMessage.set('Đăng nhập thất bại');
             },
         });
     }

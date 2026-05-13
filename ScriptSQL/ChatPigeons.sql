@@ -179,21 +179,7 @@ CREATE TABLE friends (
 );
 GO
 
--- 12. Bảng emojis
-CREATE TABLE emojis (
-    id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
-    unicode_char NVARCHAR(10) NOT NULL,
-    name NVARCHAR(100) NOT NULL,
-    shortcode NVARCHAR(50) UNIQUE NOT NULL,
-    category NVARCHAR(50),
-    keywords NVARCHAR(MAX),
-    image_url NVARCHAR(255),
-    created_at DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET() NOT NULL,
-    updated_at DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET()
-);
-GO
-
--- 13. Bảng message_reactions
+-- 12. Bảng message_reactions
 CREATE TABLE message_reactions (
     id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
     conversation_id UNIQUEIDENTIFIER NOT NULL REFERENCES conversations(id) ON DELETE NO ACTION,
@@ -206,7 +192,7 @@ CREATE TABLE message_reactions (
 );
 GO
 
--- 14. Bảng GroupJoinRequests
+-- 13. Bảng GroupJoinRequests
 CREATE TABLE GroupJoinRequests (
     id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
     user_id UNIQUEIDENTIFIER NOT NULL REFERENCES users(id) ON DELETE NO ACTION,
