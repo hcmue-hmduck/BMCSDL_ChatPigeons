@@ -85,9 +85,12 @@ class ConversationsService {
             return await conversationsModel.findByPk(conversationId);
         } else {
             // Fallback cho các trường khác nếu có
+            console.log('[ConversationsService] Updating conversation with fallback:', conversationId, conversationData);
             const conversation = await conversationsModel.findByPk(conversationId);
             if (conversation) {
-                return await conversation.update(conversationData);
+                const result = await conversation.update(conversationData);
+                console.log('[ConversationsService] Update result:', result.dataValues);
+                return result;
             }
             return null;
         }

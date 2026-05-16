@@ -1165,191 +1165,201 @@
     </div>
     }
 
-    <!-- Reply preview strip -->
-    @if (replyToMessage) {
-    <div class="reply-preview-strip">
-        <div class="reply-preview-content">
-            <div class="reply-preview-to">
-                Đang trả lời
-                <strong>{{ replyToMessage.sender_id === currentUserId() ? 'chính mình' :
-                    getSenderDisplayName(replyToMessage.sender_id, replyToMessage.sender_name) }}</strong>
+    <!-- Input area -->
+    @if (canChat()) {
+        <!-- Reply preview strip -->
+        @if (replyToMessage) {
+        <div class="reply-preview-strip">
+            <div class="reply-preview-content">
+                <div class="reply-preview-to">
+                    Đang trả lời
+                    <strong>{{ replyToMessage.sender_id === currentUserId() ? 'chính mình' :
+                        getSenderDisplayName(replyToMessage.sender_id, replyToMessage.sender_name) }}</strong>
+                </div>
+                <div class="reply-preview-text">
+                    @if (replyToMessage.message_type === 'text') {
+                    <div [innerHTML]="formatMessageText(replyToMessage.content)"></div>
+                    } @else if (replyToMessage.message_type === 'image') {
+                    <i class="bi bi-image me-1"></i> Hình ảnh
+                    } @else if (replyToMessage.message_type === 'video') {
+                    <i class="bi bi-camera-video me-1"></i> Video
+                    } @else if (replyToMessage.message_type === 'file') {
+                    <i class="bi bi-file-earmark-arrow-down me-1"></i> Tệp đính kèm
+                    } @else {
+                    Chi tiết tin nhắn
+                    }
+                </div>
             </div>
-            <div class="reply-preview-text">
-                @if (replyToMessage.message_type === 'text') {
-                <div [innerHTML]="formatMessageText(replyToMessage.content)"></div>
-                } @else if (replyToMessage.message_type === 'image') {
-                <i class="bi bi-image me-1"></i> Hình ảnh
-                } @else if (replyToMessage.message_type === 'video') {
-                <i class="bi bi-camera-video me-1"></i> Video
-                } @else if (replyToMessage.message_type === 'file') {
-                <i class="bi bi-file-earmark-arrow-down me-1"></i> Tệp đính kèm
-                } @else {
-                Chi tiết tin nhắn
-                }
-            </div>
-        </div>
 
-        <!-- Preview Thumbnail/Icon (Right side) -->
-        @if (
-        replyToMessage.message_type === 'image' ||
-        replyToMessage.message_type === 'video'
-        ) {
-        <img [src]="replyToMessage.thumbnail_url" class="reply-preview-img" />
-        } @else if (replyToMessage.message_type === 'file') {
-        <div class="reply-preview-icon-wrap">
-            <i class="bi bi-file-earmark-arrow-down"></i>
+            <!-- Preview Thumbnail/Icon (Right side) -->
+            @if (
+            replyToMessage.message_type === 'image' ||
+            replyToMessage.message_type === 'video'
+            ) {
+            <img [src]="replyToMessage.thumbnail_url" class="reply-preview-img" />
+            } @else if (replyToMessage.message_type === 'file') {
+            <div class="reply-preview-icon-wrap">
+                <i class="bi bi-file-earmark-arrow-down"></i>
+            </div>
+            }
+
+            <button class="cancel-reply-btn" (click)="cancelReply()" title="Hủy trả lời">
+                <i class="bi bi-x-lg"></i>
+            </button>
         </div>
         }
 
-        <button class="cancel-reply-btn" (click)="cancelReply()" title="Hủy trả lời">
-            <i class="bi bi-x-lg"></i>
-        </button>
-    </div>
-    }
-
-    <!-- Link Preview -->
-    @let composerPreview = activeComposerLinkPreview();
-    @if (composerPreview) {
-    <div class="composer-link-preview-container">
-        <div class="link-preview-card composer-preview" [class.is-loading]="composerPreview.loading">
-            @if (!composerPreview.loading) {
-            <button class="remove-preview-btn" type="button" (click)="clearLinkPreview()">
-                <i class="bi bi-x"></i>
-            </button>
-            @if (composerPreview.image) {
-            <div class="preview-image-wrap">
-                <img [src]="composerPreview.image" alt="Preview Image" referrerPolicy="no-referrer" />
-            </div>
-            }
-            <div class="preview-content">
-                <div class="preview-title">{{ composerPreview.title }}</div>
-                @if (composerPreview.description) {
-                <div class="preview-description">
-                    {{ composerPreview.description }}
+        <!-- Link Preview -->
+        @let composerPreview = activeComposerLinkPreview();
+        @if (composerPreview) {
+        <div class="composer-link-preview-container">
+            <div class="link-preview-card composer-preview" [class.is-loading]="composerPreview.loading">
+                @if (!composerPreview.loading) {
+                <button class="remove-preview-btn" type="button" (click)="clearLinkPreview()">
+                    <i class="bi bi-x"></i>
+                </button>
+                @if (composerPreview.image) {
+                <div class="preview-image-wrap">
+                    <img [src]="composerPreview.image" alt="Preview Image" referrerPolicy="no-referrer" />
                 </div>
                 }
-                <div class="preview-host">
-                    {{ composerPreview.hostname || composerPreview.siteName }}
-                </div>
-            </div>
-            } @else {
-            <div class="preview-skeleton-image"></div>
-            <div class="preview-content">
-                <div class="skeleton-line skeleton-host"></div>
-                <div class="skeleton-line skeleton-title"></div>
-                <div class="skeleton-line skeleton-desc"></div>
-            </div>
-            }
-        </div>
-    </div>
-    }
-
-    <!-- Upload Preview Container -->
-    @if (preUploadFiles().length > 0) {
-    <div class="upload-preview-wrap">
-        <div class="upload-preview-container">
-            @for (file of preUploadFiles(); track $index; let i = $index) {
-            <div class="preview-item">
-                <div class="preview-thumb-wrap">
-                    <!-- Image preview -->
-                    @if (file.isImage) {
-                    <img [src]="file.previewUrl" class="preview-img" />
+                <div class="preview-content">
+                    <div class="preview-title">{{ composerPreview.title }}</div>
+                    @if (composerPreview.description) {
+                    <div class="preview-description">
+                        {{ composerPreview.description }}
+                    </div>
                     }
-                    <!-- Video preview -->
-                    @if (file.isVideo) {
-                    <div class="preview-video-wrap">
-                        <video [src]="file.previewUrl" class="preview-video" muted preload="metadata"></video>
-                        <div class="preview-video-play-icon">
-                            <i class="bi bi-play-fill"></i>
+                    <div class="preview-host">
+                        {{ composerPreview.hostname || composerPreview.siteName }}
+                    </div>
+                </div>
+                } @else {
+                <div class="preview-skeleton-image"></div>
+                <div class="preview-content">
+                    <div class="skeleton-line skeleton-host"></div>
+                    <div class="skeleton-line skeleton-title"></div>
+                    <div class="skeleton-line skeleton-desc"></div>
+                </div>
+                }
+            </div>
+        </div>
+        }
+
+        <!-- Upload Preview Container -->
+        @if (preUploadFiles().length > 0) {
+        <div class="upload-preview-wrap">
+            <div class="upload-preview-container">
+                @for (file of preUploadFiles(); track $index; let i = $index) {
+                <div class="preview-item">
+                    <div class="preview-thumb-wrap">
+                        <!-- Image preview -->
+                        @if (file.isImage) {
+                        <img [src]="file.previewUrl" class="preview-img" />
+                        }
+                        <!-- Video preview -->
+                        @if (file.isVideo) {
+                        <div class="preview-video-wrap">
+                            <video [src]="file.previewUrl" class="preview-video" muted preload="metadata"></video>
+                            <div class="preview-video-play-icon">
+                                <i class="bi bi-play-fill"></i>
+                            </div>
+                        </div>
+                        }
+                        <!-- Other file icon -->
+                        @if (!file.isImage && !file.isVideo) {
+                        <div class="preview-file-icon">
+                            <i class="bi bi-file-earmark-text"></i>
+                        </div>
+                        }
+                        <button class="remove-preview-btn" (click)="removePreUploadFile(i)">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </div>
+                    @if (!file.isImage && !file.isVideo) {
+                    <div class="preview-file-info">
+                        <span class="preview-file-name">{{ file.name }}</span>
+                    </div>
+                    }
+                </div>
+                }
+            </div>
+        </div>
+        }
+
+        <!-- Input row -->
+        <div class="input-row">
+            <!-- Left icons -->
+            <div class="input-side-btns">
+                <button class="input-icon-btn" title="Đính kèm tệp" (click)="handleFileAttachment()">
+                    <i class="bi bi-paperclip"></i>
+                </button>
+                <input type="file" #fileInput (change)="onFileSelected($event)" multiple style="display: none" />
+                <button class="input-icon-btn" title="Thu âm" (click)="handleVoiceRecording()">
+                    <i class="bi bi-mic"></i>
+                </button>
+            </div>
+
+            <!-- Text box -->
+            <div class="input-box">
+                <!-- Mention Suggestions -->
+                @if (showMentionList() && mentionParticipants().length > 0) {
+                <div class="mention-suggestions">
+                    @for (
+                    participant of mentionParticipants();
+                    track participant.user_id;
+                    let i = $index
+                    ) {
+                    <div class="mention-item" [class.active]="i === mentionSelectedIndex()"
+                        (click)="selectMention(participant)">
+                        <img [src]="participant.avatar_url || 'assets/AvatarDefault.jpg'" class="mention-avatar">
+                        <div class="mention-info">
+                            <span class="mention-name">{{
+                                participant.full_name
+                                }}</span>
+                            <span class="mention-email">{{ participant.email }}</span>
                         </div>
                     </div>
                     }
-                    <!-- Other file icon -->
-                    @if (!file.isImage && !file.isVideo) {
-                    <div class="preview-file-icon">
-                        <i class="bi bi-file-earmark-text"></i>
-                    </div>
-                    }
-                    <button class="remove-preview-btn" (click)="removePreUploadFile(i)">
-                        <i class="bi bi-x"></i>
-                    </button>
                 </div>
-                @if (!file.isImage && !file.isVideo) {
-                <div class="preview-file-info">
-                    <span class="preview-file-name">{{ file.name }}</span>
+                }
+
+                <div #messageInput class="msg-input-editable" contenteditable="true" (keydown)="handleKeyDown($event)"
+                    (input)="onInput($event)" (paste)="handleInputPaste($event)" autofocus></div>
+                @if (isInputEmpty()) {
+                <div class="input-placeholder">Nhập tin nhắn...</div>
+                }
+
+                <button class="emoji-btn" title="Biểu tượng cảm xúc" (mousedown)="onEmojiButtonMouseDown($event)"
+                    (click)="toggleEmojiPicker()">
+                    <i class="bi bi-emoji-smile"></i>
+                </button>
+                <!-- Emoji picker -->
+                @if (showEmojiPicker) {
+                <div class="emoji-picker-wrap">
+                    <emoji-mart (emojiSelect)="addEmoji($event)" [set]="'apple'" [perLine]="8" [emojiSize]="32"
+                        [sheetSize]="32" [showPreview]="false">
+                    </emoji-mart>
                 </div>
                 }
             </div>
-            }
+
+            <!-- Send button -->
+            <button class="send-btn" type="button" title="Gửi" (click)="handleSendBtn()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                    <path
+                        d="M15.964.686a.5.5 0 0 0-.65-.65L.767 5.855H.766l-.452.18a.5.5 0 0 0-.082.887l.41.26.001.002 4.995 3.178 3.178 4.995.002.002.26.41a.5.5 0 0 0 .886-.083l6-15Zm-1.833 1.89L6.637 10.07l-.215-.338a.5.5 0 0 0-.154-.154l-.338-.215 7.494-7.494 1.178-.471-.47 1.178Z" />
+                </svg>
+            </button>
         </div>
-    </div>
+    } @else {
+        <div class="blocked-chat-footer">
+            <div class="blocked-chat-message">
+                <i class="bi bi-lock-fill"></i>
+                <span>Chỉ Admin mới có thể gửi tin nhắn trong nhóm này</span>
+            </div>
+        </div>
     }
-
-    <!-- Input row -->
-    <div class="input-row">
-        <!-- Left icons -->
-        <div class="input-side-btns">
-            <button class="input-icon-btn" title="Đính kèm tệp" (click)="handleFileAttachment()">
-                <i class="bi bi-paperclip"></i>
-            </button>
-            <input type="file" #fileInput (change)="onFileSelected($event)" multiple style="display: none" />
-            <button class="input-icon-btn" title="Thu âm" (click)="handleVoiceRecording()">
-                <i class="bi bi-mic"></i>
-            </button>
-        </div>
-
-        <!-- Text box -->
-        <div class="input-box">
-            <!-- Mention Suggestions -->
-            @if (showMentionList() && mentionParticipants().length > 0) {
-            <div class="mention-suggestions">
-                @for (
-                participant of mentionParticipants();
-                track participant.user_id;
-                let i = $index
-                ) {
-                <div class="mention-item" [class.active]="i === mentionSelectedIndex()"
-                    (click)="selectMention(participant)">
-                    <img [src]="participant.avatar_url || 'assets/AvatarDefault.jpg'" class="mention-avatar">
-                    <div class="mention-info">
-                        <span class="mention-name">{{
-                            participant.full_name
-                            }}</span>
-                        <span class="mention-email">{{ participant.email }}</span>
-                    </div>
-                </div>
-                }
-            </div>
-            }
-
-            <div #messageInput class="msg-input-editable" contenteditable="true" (keydown)="handleKeyDown($event)"
-                (input)="onInput($event)" (paste)="handleInputPaste($event)" autofocus></div>
-            @if (isInputEmpty()) {
-            <div class="input-placeholder">Nhập tin nhắn...</div>
-            }
-
-            <button class="emoji-btn" title="Biểu tượng cảm xúc" (mousedown)="onEmojiButtonMouseDown($event)"
-                (click)="toggleEmojiPicker()">
-                <i class="bi bi-emoji-smile"></i>
-            </button>
-            <!-- Emoji picker -->
-            @if (showEmojiPicker) {
-            <div class="emoji-picker-wrap">
-                <emoji-mart (emojiSelect)="addEmoji($event)" [set]="'apple'" [perLine]="8" [emojiSize]="32"
-                    [sheetSize]="32" [showPreview]="false">
-                </emoji-mart>
-            </div>
-            }
-        </div>
-
-        <!-- Send button -->
-        <button class="send-btn" type="button" title="Gửi" (click)="handleSendBtn()">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
-                <path
-                    d="M15.964.686a.5.5 0 0 0-.65-.65L.767 5.855H.766l-.452.18a.5.5 0 0 0-.082.887l.41.26.001.002 4.995 3.178 3.178 4.995.002.002.26.41a.5.5 0 0 0 .886-.083l6-15Zm-1.833 1.89L6.637 10.07l-.215-.338a.5.5 0 0 0-.154-.154l-.338-.215 7.494-7.494 1.178-.471-.47 1.178Z" />
-            </svg>
-        </button>
-    </div>
 </div>
 }
 

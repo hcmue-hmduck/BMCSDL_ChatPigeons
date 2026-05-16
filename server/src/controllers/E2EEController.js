@@ -35,7 +35,7 @@ class E2EEController {
     }
 
     async addConversationKeys(req, res, next) {
-        const {id} = req.user
+        const { id } = req.user
         return new SuccessResponse({
             message: 'add shared keys successfully',
             metadata: await e2eeService.addConversationKeys(id, req.body),

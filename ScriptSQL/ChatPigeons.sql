@@ -44,6 +44,7 @@ CREATE TABLE conversations (
     created_by UNIQUEIDENTIFIER REFERENCES users(id) ON DELETE SET NULL,
     last_message_id UNIQUEIDENTIFIER,
     last_message_at DATETIMEOFFSET,
+    allow_member_chat BIT DEFAULT 1,
     is_active BIT DEFAULT 1,
     key_status VARCHAR(20) NOT NULL DEFAULT 'no_key' CHECK (key_status IN ('no_key', 'active', 'require_rotation')),
     created_at DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET() NOT NULL,

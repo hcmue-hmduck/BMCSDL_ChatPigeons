@@ -228,7 +228,19 @@ class HomeConversationService {
         return { userInfo, joinedConversations };
     }
 
-    async updateConversation(conversationId, conversationData) {
+    async updateConversation(conversationId, conversationData, userId = null) {
+        // --- KIỂM TRA QUYỀN: Chỉ Trưởng nhóm (Owner) mới được đổi allow_member_chat ---
+        if (conversationData && conversationData.allow_member_chat !== undefined && userId) {
+            const participant = await participantsService.getParticipant({
+                conversation_id: conversationId,
+                user_id: userId
+            });
+            const role = participant?.role || participant?.owner;
+            if (role !== 'owner') {
+                const { ForbiddenError } = require('../core/errorResponse');
+                throw new ForbiddenError('Chỉ Trưởng nhóm mới có quyền thay đổi cài đặt này.');
+            }
+        }
         return await conversationsService.updateConversation(conversationId, conversationData);
     }
 

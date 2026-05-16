@@ -21,7 +21,8 @@ class HomeConversationController {
     async putHomeConversation(req, res) {
         const conversationId = req.params.convID;
         const conversationData = req.body;
-        const updatedConversation = await homeConversationsService.updateConversation(conversationId, conversationData);
+        const userId = req.user.id;
+        const updatedConversation = await homeConversationsService.updateConversation(conversationId, conversationData, userId);
         new SuccessResponse({
             message: 'Put home conversation successfully',
             metadata: {
@@ -45,9 +46,9 @@ class HomeConversationController {
         try {
             const { participants_ids, name, avatar_url } = req.body;
             const { id: created_by } = req.user;
-            
+
             const newConversation = await homeConversationsService.createGroup(participants_ids, name, avatar_url, created_by);
-            
+
             return new SuccessResponse({
                 message: 'Create group successfully',
                 metadata: {

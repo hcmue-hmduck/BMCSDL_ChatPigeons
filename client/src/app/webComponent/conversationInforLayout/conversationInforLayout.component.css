@@ -249,6 +249,93 @@
     font-weight: 600;
 }
 
+.setting-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+    gap: 16px;
+}
+
+.setting-info {
+    flex: 1;
+}
+
+.setting-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+}
+
+.setting-desc {
+    font-size: 11px;
+    color: var(--msg-muted);
+    margin: 0;
+    line-height: 1.4;
+}
+
+/* Switch Toggle CSS */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.1);
+    transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid var(--glass-border-subtle);
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 2px;
+    bottom: 2px;
+    background-color: #fff;
+    transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+input:checked+.slider {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+input:focus+.slider {
+    box-shadow: 0 0 8px var(--accent-lighter);
+}
+
+input:checked+.slider:before {
+    transform: translateX(20px);
+}
+
+.slider.round {
+    border-radius: 24px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}
+
 .list-item {
     display: flex;
     align-items: center;
@@ -913,6 +1000,7 @@
 .video-viewer-overlay .nav-btn:hover:not(:disabled) {
     background: rgba(187, 134, 252, 0.08);
 }
+
 /* ============================================================
    ADD MEMBER MODAL STYLES
    ============================================================ */
@@ -929,8 +1017,13 @@
 }
 
 @keyframes modalFadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
 .modal-card.add-member-modal {
@@ -949,8 +1042,15 @@
 }
 
 @keyframes modalScaleIn {
-    from { transform: scale(0.9) translateY(20px); opacity: 0; }
-    to { transform: scale(1) translateY(0); opacity: 1; }
+    from {
+        transform: scale(0.9) translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+    }
 }
 
 .modal-card-header {
@@ -1112,11 +1212,11 @@
     transition: all 0.2s;
 }
 
-.friend-select-checkbox:hover input ~ .custom-checkbox {
+.friend-select-checkbox:hover input~.custom-checkbox {
     background-color: rgba(255, 255, 255, 0.1);
 }
 
-.friend-select-checkbox input:checked ~ .custom-checkbox {
+.friend-select-checkbox input:checked~.custom-checkbox {
     background-color: var(--accent);
     border-color: var(--accent);
     box-shadow: 0 0 10px rgba(187, 134, 252, 0.3);
@@ -1135,7 +1235,7 @@
     transform: rotate(45deg);
 }
 
-.friend-select-checkbox input:checked ~ .custom-checkbox:after {
+.friend-select-checkbox input:checked~.custom-checkbox:after {
     display: block;
 }
 
@@ -1247,5 +1347,7 @@
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }

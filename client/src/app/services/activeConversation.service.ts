@@ -361,6 +361,9 @@ export class ActiveConversationService implements OnDestroy {
                     if (data.avatar_url !== undefined) {
                         conv.avatar_url = data.avatar_url;
                     }
+                    if (data.allow_member_chat !== undefined) {
+                        conv.allow_member_chat = data.allow_member_chat;
+                    }
                     convList[index] = conv;
                     return {
                         ...cur,
@@ -383,9 +386,9 @@ export class ActiveConversationService implements OnDestroy {
         this.socketService.on('blockUser', (data: any) => {
             this.userBlock.update(list => [...list, data]);
         });
-        
+
         this.socketService.on('unblockUser', (data: any) => {
-            this.userBlock.update(list => list.filter(b => 
+            this.userBlock.update(list => list.filter(b =>
                 !(String(b.blocked_id) === String(data.blocked_id) && String(b.blocker_id) === String(data.blocker_id))
             ));
         });
@@ -502,19 +505,19 @@ export class ActiveConversationService implements OnDestroy {
         this.onAddMemberSocket = (data: any) => {
             console.log('[ActiveConversationService] addMember received:', data);
             const currentUserId = this.authService.getUserId();
-            
+
             // Nếu mình là người được thêm vào
             if (data.added_user_ids && data.added_user_ids.includes(currentUserId)) {
                 // Tham gia vào room socket
                 this.socketService.emit('joinConversation', data.conversation_id);
-                
+
                 // Tải lại danh sách hội thoại để thấy nhóm mới
                 this.conversationService.getConversations(currentUserId).subscribe({
                     next: async (response) => {
                         const metadata = response.metadata || {};
                         let joined = metadata.homeConversationData?.joinedConversations || [];
                         joined = await this.decryptSidebarLastMessages(joined);
-                        
+
                         this.conversations.set({
                             ...metadata,
                             homeConversationData: {
@@ -600,10 +603,10 @@ export class ActiveConversationService implements OnDestroy {
                     const participants = conv.participants || [];
                     const existingIds = new Set(participants.map((p: any) => String(p.user_id)));
                     const filteredNew = newParticipants.filter(p => !existingIds.has(String(p.user_id)));
-                    
-                    return { 
-                        ...conv, 
-                        participants: [...participants, ...filteredNew] 
+
+                    return {
+                        ...conv,
+                        participants: [...participants, ...filteredNew]
                     };
                 }
                 return conv;
@@ -811,12 +814,12 @@ export class ActiveConversationService implements OnDestroy {
                     participants: realParticipants || updatedJoined[index].participants,
                     lastMessage: lastMessageData
                         ? {
-                              sender_id: lastMessageData.sender_id,
-                              content: lastMessageData.content,
-                              created_at: lastMessageData.created_at,
-                              message_type: lastMessageData.message_type,
-                              id: lastMessageData.id,
-                          }
+                            sender_id: lastMessageData.sender_id,
+                            content: lastMessageData.content,
+                            created_at: lastMessageData.created_at,
+                            message_type: lastMessageData.message_type,
+                            id: lastMessageData.id,
+                        }
                         : updatedJoined[index].lastMessage,
                 };
 

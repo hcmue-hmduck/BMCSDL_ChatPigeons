@@ -51,6 +51,11 @@ const Participant = sequelize.define('Participant', {
         defaultValue: false,
         field: 'is_pinned'
     },
+    is_active: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: true,
+        field: 'is_active'
+    },
     last_read_message_id: {
         type: DataTypes.UUID,
         allowNull: true,

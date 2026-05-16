@@ -6,7 +6,7 @@ const usersService = require('./usersService');
 const linkpreviewService = require('./linkpreviewService');
 const participantsService = require('./participantsService.js');
 const oneSignalService = require('./oneSignalService');
-const { BadRequestError, E2EEErrorCode } = require('../core/errorResponse.js');
+const { BadRequestError, ForbiddenError, E2EEErrorCode } = require('../core/errorResponse.js');
 
 const e2eeService = require('./E2EEService');
 
@@ -198,6 +198,19 @@ class HomeMessagesService {
         let resolvedDuration = duration;
         let resolvedLinkDescription = link_description;
         let resolvedHasLink = has_link;
+
+        // --- KIỂM TRA QUYỀN CHAT TRONG NHÓM ---
+        const conversation = await conversationsService.getConversationById(conversationId);
+        if (message_type !== 'system' && conversation && conversation.conversation_type === 'group' && !conversation.allow_member_chat) {
+            const senderParticipant = await participantsService.getParticipant({
+                conversation_id: conversationId,
+                user_id: senderId,
+            });
+            const role = senderParticipant?.role || senderParticipant?.owner;
+            if (senderParticipant && (role === 'member' || !role)) {
+                throw new ForbiddenError('Chỉ Admin mới có quyền gửi tin nhắn trong nhóm này.');
+            }
+        }
 
         // --- KIỂM TRA KEY STATUS (cần xoay key trước khi gửi) ---
         if (is_e2ee) {

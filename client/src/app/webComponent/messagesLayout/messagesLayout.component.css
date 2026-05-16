@@ -4475,3 +4475,34 @@
 .unlock-conversation-btn:active {
     transform: translateY(0);
 }
+
+/* Blocked Chat Footer */
+.blocked-chat-footer {
+    padding: 16px 24px;
+    background: rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(8px);
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 0 0 16px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 80px;
+}
+
+.blocked-chat-message {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 12px 24px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.blocked-chat-message i {
+    font-size: 20px;
+    color: var(--accent);
+}

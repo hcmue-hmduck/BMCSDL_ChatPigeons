@@ -47,6 +47,11 @@ const Conversation = sequelize.define('Conversation', {
         defaultValue: true,
         field: 'is_active'
     },
+    allow_member_chat: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: true,
+        field: 'allow_member_chat'
+    },
     key_status: {
         type: DataTypes.STRING(20),
         defaultValue: 'no_key',

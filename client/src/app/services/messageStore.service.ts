@@ -69,7 +69,7 @@ export class MessageStoreService {
     addMessage(convId: string, message: any) {
         const current = this.getConversationState(convId);
         const messages = current.getMessagesData.homeMessagesData?.messages || [];
-        
+
         // Kiểm tra trùng lặp
         if (messages.some((m: any) => m.id === message.id)) return;
 
@@ -95,11 +95,11 @@ export class MessageStoreService {
     updateMessage(convId: string, updatedMessage: any) {
         const current = this.getConversationState(convId);
         const messages = current.getMessagesData.homeMessagesData?.messages || [];
-        
-        const updatedList = messages.map((m: any) => 
-            (m.id === updatedMessage.id || m.id === updatedMessage.message_id) 
-            ? { ...m, ...updatedMessage } 
-            : m
+
+        const updatedList = messages.map((m: any) =>
+            (m.id === updatedMessage.id || m.id === updatedMessage.message_id)
+                ? { ...m, ...updatedMessage }
+                : m
         );
 
         this.updateState(convId, {
@@ -120,7 +120,7 @@ export class MessageStoreService {
         const current = this.getConversationState(convId);
         const newReactions = new Map(current.messageReactions);
         newReactions.set(messageId, reactions);
-        
+
         this.updateState(convId, { messageReactions: newReactions });
     }
 

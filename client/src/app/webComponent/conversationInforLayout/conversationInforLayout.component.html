@@ -16,16 +16,19 @@
                     [alt]="profileName" [size]="112">
                 </app-group-avatar-layout>
                 @if (isGroupConversation && isCurrentUserActiveMember && (isOwner || isAdmin)) {
-                <button class="upload-avatar-btn" (click)="triggerAvatarUpload()" title="Đổi ảnh đại diện" style="position: absolute; bottom: 0; right: 0; border: none; background: rgba(0,0,0,0.6); color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                <button class="upload-avatar-btn" (click)="triggerAvatarUpload()" title="Đổi ảnh đại diện"
+                    style="position: absolute; bottom: 0; right: 0; border: none; background: rgba(0,0,0,0.6); color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
                     <i class="bi bi-camera"></i>
                 </button>
-                <input type="file" #avatarInput style="display: none;" (change)="onAvatarSelected($event)" accept="image/*">
+                <input type="file" #avatarInput style="display: none;" (change)="onAvatarSelected($event)"
+                    accept="image/*">
                 }
             </div>
             <h1 class="profile-name" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
                 {{ profileName }}
                 @if (isGroupConversation && isCurrentUserActiveMember && (isOwner || isAdmin)) {
-                <button class="action-btn edit-btn" (click)="editGroupName()" title="Sửa tên nhóm" style="font-size: 1rem; border: none; background: none; cursor: pointer; padding: 0; display: inline-flex; align-items: center;">
+                <button class="action-btn edit-btn" (click)="editGroupName()" title="Sửa tên nhóm"
+                    style="font-size: 1rem; border: none; background: none; cursor: pointer; padding: 0; display: inline-flex; align-items: center;">
                     <i class="bi bi-pencil" style="color: var(--accent-color, #ff0055);"></i>
                 </button>
                 }
@@ -72,7 +75,8 @@
                     <div class="content-padding">
                         @for (member of participants; track member.user_id) {
                         <div class="member-item">
-                            <img [src]="member.avatar_url || 'assets/AvatarDefault.jpg'" [alt]="member.full_name" class="member-avatar">
+                            <img [src]="member.avatar_url || 'assets/AvatarDefault.jpg'" [alt]="member.full_name"
+                                class="member-avatar">
                             <div class="member-info">
                                 <p class="member-name">{{ member.nick_name || member.full_name }}</p>
                                 <p class="member-role accent-text">
@@ -290,36 +294,70 @@
                 </div>
             </div>
 
+            <!-- Cài đặt nhóm (Chỉ Trưởng nhóm) -->
+            @if (isGroupConversation && isOwner) {
+            <div class="accordion-item">
+                <button class="accordion-header" (click)="toggleSection('groupSettings')">
+                    <span>Cài đặt nhóm</span>
+                    <i class="bi" [class.bi-chevron-up]="sections().groupSettings"
+                        [class.bi-chevron-down]="!sections().groupSettings"></i>
+                </button>
+                <div class="accordion-content" [class.open]="sections().groupSettings">
+                    <div class="content-padding">
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <span class="setting-label">Cho phép thành viên nhắn tin</span>
+                                <p class="setting-desc">Nếu tắt, chỉ Admin và Owner mới có thể gửi tin nhắn.</p>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" [checked]="conversationInfor?.allow_member_chat"
+                                    (change)="toggleAllowMemberChat($event)">
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            }
+
             <!-- Quyền riêng tư & Hỗ trợ -->
             @if (isGroupConversation) {
-                <div class="accordion-item">
-                    @if (isOwner) {
-                        <button class="accordion-header" style="color: var(--danger-color, #ff0055); display: flex; justify-content: space-between; align-items: center;" (click)="disbandGroup()">
-                            <span>Giải tán nhóm</span>
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    } @else if (isCurrentUserActiveMember) {
-                        <button class="accordion-header" style="color: var(--danger-color, #ff0055); display: flex; justify-content: space-between; align-items: center;" (click)="leaveGroup()">
-                            <span>Rời nhóm</span>
-                            <i class="bi bi-box-arrow-right"></i>
-                        </button>
-                    }
-                </div>
+            <div class="accordion-item">
+                @if (isOwner) {
+                <button class="accordion-header"
+                    style="color: var(--danger-color, #ff0055); display: flex; justify-content: space-between; align-items: center;"
+                    (click)="disbandGroup()">
+                    <span>Giải tán nhóm</span>
+                    <i class="bi bi-trash"></i>
+                </button>
+                } @else if (isCurrentUserActiveMember) {
+                <button class="accordion-header"
+                    style="color: var(--danger-color, #ff0055); display: flex; justify-content: space-between; align-items: center;"
+                    (click)="leaveGroup()">
+                    <span>Rời nhóm</span>
+                    <i class="bi bi-box-arrow-right"></i>
+                </button>
+                }
+            </div>
             }
             @if (!isGroupConversation) {
-                <div class="accordion-item">
-                    @if (isBlocked) {
-                        <button class="accordion-header" style="color: var(--danger-color, #ff0055); display: flex; justify-content: space-between; align-items: center;" (click)="unblockUser()">
-                            <span>Bỏ chặn</span>
-                            <i class="bi bi-shield-check"></i>
-                        </button>
-                    } @else {
-                        <button class="accordion-header" style="color: var(--danger-color, #ff0055); display: flex; justify-content: space-between; align-items: center;" (click)="blockUser()">
-                            <span>Chặn</span>
-                            <i class="bi bi-shield-slash"></i>
-                        </button>
-                    }
-                </div>
+            <div class="accordion-item">
+                @if (isBlocked) {
+                <button class="accordion-header"
+                    style="color: var(--danger-color, #ff0055); display: flex; justify-content: space-between; align-items: center;"
+                    (click)="unblockUser()">
+                    <span>Bỏ chặn</span>
+                    <i class="bi bi-shield-check"></i>
+                </button>
+                } @else {
+                <button class="accordion-header"
+                    style="color: var(--danger-color, #ff0055); display: flex; justify-content: space-between; align-items: center;"
+                    (click)="blockUser()">
+                    <span>Chặn</span>
+                    <i class="bi bi-shield-slash"></i>
+                </button>
+                }
+            </div>
             }
         </div>
 

@@ -104,13 +104,13 @@ export class ConversationInfoLayoutComponent implements OnInit, OnDestroy, OnCha
         }
 
         this.onUpdateConversationInfoSocket = (data: any) => {
-            const currentActiveId = this.activeConversationService.activeConversationId() || 
-                                    this.conversationInfor?.conversation_id;
-                                    
+            const currentActiveId = this.activeConversationService.activeConversationId() ||
+                this.conversationInfor?.conversation_id;
+
             // So sánh linh hoạt hơn: Kiểm tra ID thật hoặc ID đang active trên store
-            if (data.conversation_id === this.conversationInfor?.conversation_id || 
-                 data.conversation_id === currentActiveId) {
-                
+            if (data.conversation_id === this.conversationInfor?.conversation_id ||
+                data.conversation_id === currentActiveId) {
+
                 // Cập nhật title và avatar nếu có
                 if (data.title !== undefined) {
                     if (this.conversationInfor) {
@@ -123,7 +123,12 @@ export class ConversationInfoLayoutComponent implements OnInit, OnDestroy, OnCha
                     }
                     this.conversationAvatar = data.avatar_url;
                 }
-                
+                if (data.allow_member_chat !== undefined) {
+                    if (this.conversationInfor) {
+                        this.conversationInfor.allow_member_chat = data.allow_member_chat;
+                    }
+                }
+
                 this.cdr.detectChanges();
 
                 // Xử lý file upload nếu có
@@ -199,12 +204,14 @@ export class ConversationInfoLayoutComponent implements OnInit, OnDestroy, OnCha
 
     get isOwner(): boolean {
         const me = this.participants.find((p: any) => String(p.user_id) === String(this.currentUserId));
-        return me?.owner === 'owner';
+        const role = me?.role || me?.owner;
+        return role === 'owner';
     }
 
     get isAdmin(): boolean {
         const me = this.participants.find((p: any) => String(p.user_id) === String(this.currentUserId));
-        return me?.owner === 'admin';
+        const role = me?.role || me?.owner;
+        return role === 'admin';
     }
 
     get otherParticipant(): any | null {
@@ -256,7 +263,7 @@ export class ConversationInfoLayoutComponent implements OnInit, OnDestroy, OnCha
 
         const blockedList = this.relationshipStore.blockedUser();
         const blockData = blockedList.find((b: any) => String(b.friend_id || b.id) === String(other.user_id));
-        
+
         if (!blockData || !blockData.block_id) {
             Swal.fire('Lỗi', 'Không tìm thấy thông tin chặn', 'error');
             return;
@@ -300,7 +307,8 @@ export class ConversationInfoLayoutComponent implements OnInit, OnDestroy, OnCha
         video: false,
         file: false,
         link: false,
-        privacy: false
+        privacy: false,
+        groupSettings: false
     });
 
     mediaShowAll = signal({
@@ -462,7 +470,7 @@ export class ConversationInfoLayoutComponent implements OnInit, OnDestroy, OnCha
             if (result.isConfirmed) {
                 const newNickname = result.value;
                 const participantId = member.id;
-                
+
                 if (!participantId) {
                     Swal.fire('Lỗi', 'Không tìm thấy ID người tham gia', 'error');
                     return;
@@ -475,14 +483,14 @@ export class ConversationInfoLayoutComponent implements OnInit, OnDestroy, OnCha
                     next: (res: any) => {
                         Swal.fire('Thành công', 'Đã cập nhật biệt danh', 'success');
                         member.nick_name = newNickname;
-                        
+
                         // Cập nhật store ngay lập tức cho sender
                         this.activeConversationService.updateParticipantNickname(
                             this.conversationInfor.conversation_id,
                             member.user_id,
                             newNickname
                         );
-                        
+
                         this.socketService.emit('updateParticipant', {
                             conversation_id: this.conversationInfor.conversation_id,
                             user_id: member.user_id,
@@ -509,7 +517,7 @@ export class ConversationInfoLayoutComponent implements OnInit, OnDestroy, OnCha
                                 if (savedMsg) {
                                     // Thêm vào store cục bộ để hiển thị ngay không cần reload
                                     this.messageStoreService.addMessage(this.conversationInfor.conversation_id, savedMsg);
-                                    
+
                                     this.socketService.emit('sendMessage', savedMsg);
                                     this.socketService.emit('updateConversation', savedMsg);
                                 }
@@ -524,10 +532,73 @@ export class ConversationInfoLayoutComponent implements OnInit, OnDestroy, OnCha
         });
     }
 
+    toggleAllowMemberChat(event: Event) {
+        const checkbox = event.target as HTMLInputElement;
+        const newValue = checkbox.checked;
+        const conversationId = this.conversationInfor?.conversation_id || this.activeConversationService.activeConversationId();
+
+        if (!conversationId) return;
+
+        if (!this.isOwner) {
+            Swal.fire('Lỗi', 'Chỉ Trưởng nhóm mới có quyền thay đổi cài đặt này.', 'error');
+            checkbox.checked = !newValue;
+            return;
+        }
+
+        Swal.fire({
+            title: 'Đang cập nhật...',
+            didOpen: () => {
+                Swal.showLoading();
+            },
+            allowOutsideClick: false
+        });
+
+        this.conversationService.putConversation(conversationId, { allow_member_chat: newValue }).subscribe({
+            next: () => {
+                Swal.fire('Thành công', 'Đã cập nhật cài đặt nhóm', 'success');
+                if (this.conversationInfor) {
+                    this.conversationInfor.allow_member_chat = newValue;
+                }
+
+                // Emit socket to notify other members
+                this.socketService.emit('updateConversationInfo', {
+                    conversation_id: conversationId,
+                    allow_member_chat: newValue
+                });
+
+                // Create system message
+                const messageContent = `@[${this.currentUserId}] đã ${newValue ? 'mở' : 'tắt'} tính năng cho phép thành viên nhắn tin trong nhóm.`;
+                this.messagesService.postMessage(
+                    conversationId,
+                    this.currentUserId,
+                    messageContent,
+                    undefined,
+                    'system'
+                ).subscribe({
+                    next: (msgRes: any) => {
+                        const savedMsg = msgRes.metadata?.newMessage;
+                        if (savedMsg) {
+                            this.messageStoreService.addMessage(conversationId, savedMsg);
+                            this.socketService.emit('sendMessage', savedMsg);
+                            this.socketService.emit('updateConversation', savedMsg);
+                        }
+                    }
+                });
+
+                this.cdr.detectChanges();
+            },
+            error: (err) => {
+                console.error('Failed to update allow_member_chat:', err);
+                Swal.fire('Lỗi', 'Không thể cập nhật cài đặt nhóm', 'error');
+                checkbox.checked = !newValue; // revert checkbox
+            }
+        });
+    }
+
     editGroupName() {
         const currentName = this.profileName;
         const conversationId = this.conversationInfor?.conversation_id || this.activeConversationService.activeConversationId();
-        
+
         if (!conversationId) {
             Swal.fire('Lỗi', 'Không tìm thấy ID cuộc trò chuyện', 'error');
             return;
@@ -550,7 +621,7 @@ export class ConversationInfoLayoutComponent implements OnInit, OnDestroy, OnCha
         }).then((result) => {
             if (result.isConfirmed && result.value) {
                 const newName = result.value.trim();
-                
+
                 Swal.fire({
                     title: 'Đang cập nhật...',
                     didOpen: () => {
@@ -562,11 +633,11 @@ export class ConversationInfoLayoutComponent implements OnInit, OnDestroy, OnCha
                 this.conversationService.putConversation(conversationId, { name: newName }).subscribe({
                     next: (res: any) => {
                         Swal.fire('Thành công', 'Đã cập nhật tên nhóm', 'success');
-                        
+
                         if (this.conversationInfor) {
                             this.conversationInfor.title = newName;
                         }
-                        
+
                         this.activeConversationService.updateConversationList({
                             conversation_id: conversationId,
                             title: newName
@@ -576,7 +647,7 @@ export class ConversationInfoLayoutComponent implements OnInit, OnDestroy, OnCha
                             conversation_id: conversationId,
                             title: newName
                         });
-                        
+
                         // Tạo tin nhắn hệ thống
                         const messageContent = `@[${this.currentUserId}] đã đổi tên nhóm thành "${newName}"`;
                         this.messagesService.postMessage(
@@ -595,7 +666,7 @@ export class ConversationInfoLayoutComponent implements OnInit, OnDestroy, OnCha
                                 }
                             }
                         });
-                        
+
                         this.cdr.detectChanges();
                     },
                     error: (err) => {
@@ -723,12 +794,12 @@ export class ConversationInfoLayoutComponent implements OnInit, OnDestroy, OnCha
                     this.conversationService.putConversation(conversationId, { avatar_url: avatarUrl }).subscribe({
                         next: () => {
                             Swal.fire('Thành công', 'Đã cập nhật ảnh đại diện nhóm', 'success');
-                            
+
                             if (this.conversationInfor) {
                                 this.conversationInfor.avatar_url = avatarUrl;
                             }
                             this.conversationAvatar = avatarUrl;
-                            
+
                             this.activeConversationService.updateConversationList({
                                 conversation_id: conversationId,
                                 avatar_url: avatarUrl
@@ -757,7 +828,7 @@ export class ConversationInfoLayoutComponent implements OnInit, OnDestroy, OnCha
                                     }
                                 }
                             });
-                            
+
                             this.cdr.detectChanges();
                         },
                         error: (err: any) => {
@@ -943,7 +1014,7 @@ export class ConversationInfoLayoutComponent implements OnInit, OnDestroy, OnCha
             next: (res: any) => {
                 Swal.fire('Thành công', successMessage, 'success');
                 member.owner = role; // Cập nhật local
-                
+
                 this.socketService.emit('updateParticipant', {
                     conversation_id: this.conversationInfor.conversation_id,
                     user_id: member.user_id,
@@ -1126,7 +1197,7 @@ export class ConversationInfoLayoutComponent implements OnInit, OnDestroy, OnCha
                         conversationId: convID,
                         conversation_id: convID,
                     });
-                    
+
                     // Thực hiện xoay key ngay lập tức để người mới có thể đọc tin nhắn sau này
                     this.keyManagementService.rotateConversationKey(convID).catch((err: any) => {
                         console.error('rotateConversationKey after add members failed:', err);

@@ -69,7 +69,7 @@ export class LocalDatabaseService {
     constructor(private authService: AuthService) {
         if (typeof window !== 'undefined') {
             (window as any).TestLocalDB = this;
-            
+
             effect(() => {
                 const userId = this.authService.getUserId();
                 if (userId) {

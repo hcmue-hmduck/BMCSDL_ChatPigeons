@@ -32,7 +32,7 @@ export class Conversation {
     }
 
     postConversation(targetUserId: string, currentUserId: string): Observable<any> {
-        return this.http.post(`${this.apiUrl}`, { 
+        return this.http.post(`${this.apiUrl}`, {
             participants_id: targetUserId,
             created_by: currentUserId,
             conversation_type: 'direct'

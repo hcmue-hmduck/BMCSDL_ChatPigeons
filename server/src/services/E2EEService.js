@@ -89,7 +89,7 @@ class E2EEService {
         return vault;
     }
 
-    async addConversationKeys(user_id,  { conversation_key_vaults }) {
+    async addConversationKeys(user_id, { conversation_key_vaults }) {
         if (!user_id || !conversation_key_vaults || !Array.isArray(conversation_key_vaults) || conversation_key_vaults.length === 0)
             throw new BadRequestError('invalid parameters');
 

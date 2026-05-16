@@ -30,7 +30,7 @@ export class KeyManagementService {
     constructor(private authService: AuthService) {
         if (typeof window !== 'undefined') {
             (window as any).TestKeyMService = this;
-            
+
             // Re-check identity key whenever userId changes
             effect(() => {
                 const id = this.userId;

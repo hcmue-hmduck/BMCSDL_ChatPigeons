@@ -241,6 +241,7 @@ export class MessagesLayoutComponent implements OnInit, AfterViewInit, AfterView
             user_info: this.convStore.conversations()?.homeConversationData?.userInfo,
             type: conv.type,
             avatar_url: conv.avatar_url,
+            allow_member_chat: conv.allow_member_chat,
             other_participant:
                 conv.type === 'direct'
                     ? conv.participants.find(
@@ -248,6 +249,16 @@ export class MessagesLayoutComponent implements OnInit, AfterViewInit, AfterView
                     )
                     : null,
         };
+    });
+
+    canChat = computed(() => {
+        const info = this.getMessageInfor();
+        if (!info || info.type !== 'group') return true;
+        if (info.allow_member_chat) return true;
+
+        const me = this.currentParticipant();
+        const role = me?.role || me?.owner;
+        return role === 'owner' || role === 'admin';
     });
 
     @Output() toggleDetails = new EventEmitter<void>();
