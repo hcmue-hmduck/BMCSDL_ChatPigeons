@@ -60,6 +60,7 @@ CREATE TABLE participants (
     role VARCHAR(20) DEFAULT 'member' CHECK (role IN ('member', 'admin', 'owner')),
     joined_at DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET(),
     left_at DATETIMEOFFSET NULL,
+    is_active BIT DEFAULT 1,
     nick_name NVARCHAR(100),
     is_muted BIT DEFAULT 0,
     is_pinned BIT DEFAULT 0,
@@ -207,7 +208,7 @@ CREATE TABLE GroupJoinRequests (
 );
 GO
 
--- 15. Foreign Key bổ sung
+-- 14. Foreign Key bổ sung
 ALTER TABLE conversations
 ADD CONSTRAINT fk_conv_last_msg FOREIGN KEY (last_message_id) REFERENCES messages(id) ON DELETE NO ACTION;
 GO

@@ -69,12 +69,6 @@ BEGIN
 END;
 GO
 
-CREATE TRIGGER trg_UpdateEmojisUpdatedAt ON emojis AFTER UPDATE AS
-BEGIN
-    UPDATE emojis SET updated_at = SYSDATETIMEOFFSET() FROM emojis INNER JOIN inserted i ON emojis.id = i.id;
-END;
-GO
-
 CREATE TRIGGER trg_UpdateMessageReactionsUpdatedAt ON message_reactions AFTER UPDATE AS
 BEGIN
     UPDATE message_reactions SET updated_at = SYSDATETIMEOFFSET() FROM message_reactions INNER JOIN inserted i ON message_reactions.id = i.id;
