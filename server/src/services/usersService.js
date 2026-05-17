@@ -83,7 +83,8 @@ class UsersService {
                 role: 'user',
                 full_name: userData.full_name,
                 email: userData.email,
-                avatar_url: null
+                avatar_url: null,
+                is_active: true
             };
         } catch (error) {
             console.error('DETAILED SIGNUP ERROR:', error);

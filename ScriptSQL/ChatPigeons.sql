@@ -1,12 +1,12 @@
 
 -- 1. Tạo Database
-IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'ChatPigeons3')
+IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'ChatPigeons')
 BEGIN
-    CREATE DATABASE ChatPigeons3;
+    CREATE DATABASE ChatPigeons;
 END
 GO
 
-USE ChatPigeons3;
+USE ChatPigeons;
 GO
 
 -- 2. Bảng users
