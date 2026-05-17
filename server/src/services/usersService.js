@@ -11,14 +11,17 @@ class UsersService {
         const replacements = {};
 
         if (where.id) {
+            // Khi truy vấn các ID cụ thể (như thành viên trong cuộc trò chuyện), 
+            // lấy trực tiếp từ bảng 'users' để tránh việc lọc mất Admin làm lỗi hiển thị tin nhắn/nhóm
+            query = 'SELECT * FROM users WHERE is_active = 1';
             const userIds = Array.isArray(where.id) ? where.id : [where.id];
             query += ' AND id IN (:userIds)';
             replacements.userIds = userIds;
-        }
-
-        if (where.full_name && typeof where.full_name === 'string') {
-            query += ' AND full_name LIKE :fullName';
-            replacements.fullName = `%${where.full_name}%`;
+        } else {
+            if (where.full_name && typeof where.full_name === 'string') {
+                query += ' AND full_name LIKE :fullName';
+                replacements.fullName = `%${where.full_name}%`;
+            }
         }
 
         query += ' ORDER BY full_name ASC';
