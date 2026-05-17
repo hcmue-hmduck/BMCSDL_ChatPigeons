@@ -64,7 +64,6 @@ CREATE TABLE participants (
     nick_name NVARCHAR(100),
     is_muted BIT DEFAULT 0,
     is_pinned BIT DEFAULT 0,
-    is_active BIT DEFAULT 1,
     last_read_message_id UNIQUEIDENTIFIER,
     history_cleared_at DATETIMEOFFSET NULL,
     created_at DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET() NOT NULL,

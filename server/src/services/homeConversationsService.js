@@ -238,6 +238,10 @@ class HomeConversationService {
 
         const filteredJoinedConversations = joinedConversations.filter(c => {
             if (c.lastMessage === null) {
+                // Giữ lại nhóm mới tạo chưa có tin nhắn
+                if (c.type === 'group') {
+                    return true;
+                }
                 return false;
             }
             return true;
