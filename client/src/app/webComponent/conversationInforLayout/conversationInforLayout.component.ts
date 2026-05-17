@@ -18,6 +18,8 @@ import { Conversation } from '../../services/conversation';
 import { UploadService } from '../../services/uploadService';
 import { RelationshipStoreService } from '../../services/relationshipStore.service';
 import { KeyManagementService } from '../../services/e2ee/keyManagementService';
+import { LocalDatabaseService } from '../../services/e2ee/localDatabaseService';
+import { Router } from '@angular/router';
 
 @Component({
     selector: 'app-conversation-info-layout',
@@ -65,6 +67,8 @@ export class ConversationInfoLayoutComponent implements OnInit, OnDestroy, OnCha
     uploadService = inject(UploadService);
     relationshipStore = inject(RelationshipStoreService);
     keyManagementService = inject(KeyManagementService);
+    localDatabaseService = inject(LocalDatabaseService);
+    router = inject(Router);
     private cdr = inject(ChangeDetectorRef);
     @ViewChild('avatarInput') avatarInput!: ElementRef<HTMLInputElement>;
     private onUpdateConversationInfoSocket?: (data: any) => void;
@@ -1218,6 +1222,71 @@ export class ConversationInfoLayoutComponent implements OnInit, OnDestroy, OnCha
                 this.addMemberError = serverMessage || 'Gặp lỗi khi thêm thành viên. Vui lòng thử lại.';
                 this.isAddingMembers = false;
                 this.cdr.detectChanges();
+            }
+        });
+    }
+
+    clearHistory() {
+        const conversationId = this.conversationInfor?.conversation_id || this.activeConversationService.activeConversationId();
+        if (!conversationId) return;
+
+        Swal.fire({
+            title: 'Xóa lịch sử trò chuyện?',
+            text: 'Tất cả tin nhắn sẽ bị xóa đối với bạn và không thể khôi phục!',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Xóa',
+            cancelButtonText: 'Hủy',
+            confirmButtonColor: '#ff0055'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                Swal.fire({
+                    title: 'Đang xóa...',
+                    didOpen: () => {
+                        Swal.showLoading();
+                    },
+                    allowOutsideClick: false
+                });
+
+                try {
+                    // 1. Gọi API phía server
+                    await lastValueFrom(this.conversationService.clearConversationHistory(conversationId));
+
+                    // 2. Xóa cache tin nhắn local trong IndexedDB
+                    await this.localDatabaseService.clearMessagesByConversation(conversationId);
+
+                    // 3. Clear messageStoreService để giao diện chat trống ngay lập tức
+                    this.messageStoreService.updateState(conversationId, {
+                        getMessagesData: {
+                            homeMessagesData: {
+                                messages: [],
+                                conversation_type: this.conversationInfor?.type || '',
+                                pinnedMessages: [],
+                            },
+                        },
+                        pinnedMessages: [],
+                        isLoaded: true
+                    });
+
+                    // 4. Cập nhật Sidebar tùy loại cuộc hội thoại (Direct hay Group)
+                    if (this.isGroupConversation) {
+                        this.activeConversationService.clearConversationSidebarPreview(conversationId);
+                    } else {
+                        // Ẩn/xóa hoàn toàn cuộc trò chuyện 2 người khỏi danh sách sidebar
+                        this.activeConversationService.removeConversationFromList(conversationId);
+                    }
+
+                    // Tự động chuyển hướng về trang chủ sau khi xóa thành công
+                    this.activeConversationService.setActiveConversationId(null);
+                    this.activeConversationService.showConversationInfor.set(false);
+                    this.router.navigate(['/conversations']);
+
+                    Swal.fire('Thành công', 'Đã xóa lịch sử trò chuyện thành công.', 'success');
+                    this.cdr.detectChanges();
+                } catch (err) {
+                    console.error('Failed to clear conversation history:', err);
+                    Swal.fire('Lỗi', 'Không thể xóa lịch sử trò chuyện.', 'error');
+                }
             }
         });
     }

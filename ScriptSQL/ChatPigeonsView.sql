@@ -20,7 +20,9 @@ SELECT
     p.is_muted,
     p.is_pinned,
     p.left_at,
-    p.joined_at
+    p.joined_at,
+    p.history_cleared_at,
+    c.allow_member_chat
 FROM conversations c
 JOIN participants p ON c.id = p.conversation_id;
 GO
@@ -75,7 +77,8 @@ LEFT JOIN messages lm ON p.last_read_message_id = lm.id
 WHERE m.created_at > ISNULL(lm.created_at, '1900-01-01')
   AND m.sender_id != p.user_id
   AND (p.left_at IS NULL OR m.created_at <= p.left_at)
-  AND m.created_at >= ISNULL(p.joined_at, '1900-01-01'); -- Tránh lỗi nếu joined_at bị NULL
+  AND m.created_at >= ISNULL(p.joined_at, '1900-01-01') -- Tránh lỗi nếu joined_at bị NULL
+  AND (p.history_cleared_at IS NULL OR m.created_at > p.history_cleared_at);
 GO
 
 

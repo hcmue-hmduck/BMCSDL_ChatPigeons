@@ -152,4 +152,12 @@ export class LocalDatabaseService {
             .limit(limit)
             .toArray();
     }
+
+    async clearMessagesByConversation(conversationId: string): Promise<number> {
+        if (!this.db) throw new Error('Database not initialized');
+        return await this.db.messages
+            .where('[conversationId+createdAt]')
+            .between([conversationId, Dexie.minKey], [conversationId, Dexie.maxKey])
+            .delete();
+    }
 }

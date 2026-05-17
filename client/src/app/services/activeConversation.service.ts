@@ -762,6 +762,41 @@ export class ActiveConversationService implements OnDestroy {
                         joinedConversations: convList,
                     },
                 };
+            } else {
+                // Cuộc hội thoại không tồn tại trong danh sách sidebar hiện tại
+                // Có thể do cuộc trò chuyện 1-1 bị ẩn đi sau khi xoá lịch sử
+                // Chúng ta sẽ reload lại danh sách cuộc trò chuyện từ backend để khôi phục/hiển thị lại cuộc trò chuyện này
+                const userId = this.authService.getUserId();
+                if (userId) {
+                    this.conversationService.getConversations(userId).subscribe({
+                        next: async (response) => {
+                            const metadata = response.metadata || {};
+                            let joined = metadata.homeConversationData?.joinedConversations || [];
+                            joined = await this.decryptSidebarLastMessages(joined);
+
+                            // Sắp xếp danh sách
+                            const sorted = [...joined].sort((a: any, b: any) => {
+                                if (a.is_pinned && !b.is_pinned) return -1;
+                                if (!a.is_pinned && b.is_pinned) return 1;
+                                const timeA = new Date(
+                                    a.lastMessage?.created_at || a.updated_at || 0,
+                                ).getTime();
+                                const timeB = new Date(
+                                    b.lastMessage?.created_at || b.updated_at || 0,
+                                ).getTime();
+                                return timeB - timeA;
+                            });
+
+                            this.conversations.set({
+                                ...metadata,
+                                homeConversationData: {
+                                    ...metadata.homeConversationData,
+                                    joinedConversations: sorted,
+                                },
+                            });
+                        },
+                    });
+                }
             }
             return cur;
         });
@@ -843,6 +878,45 @@ export class ActiveConversationService implements OnDestroy {
                 };
             }
             return current;
+        });
+    }
+
+    removeConversationFromList(conversationId: string) {
+        this.conversations.update((current: any) => {
+            if (!current?.homeConversationData?.joinedConversations) return current;
+            const joined = current.homeConversationData.joinedConversations.filter(
+                (c: any) => String(c.conversation_id) !== String(conversationId)
+            );
+            return {
+                ...current,
+                homeConversationData: {
+                    ...current.homeConversationData,
+                    joinedConversations: joined
+                }
+            };
+        });
+    }
+
+    clearConversationSidebarPreview(conversationId: string) {
+        this.conversations.update((current: any) => {
+            if (!current?.homeConversationData?.joinedConversations) return current;
+            const updated = current.homeConversationData.joinedConversations.map((c: any) => {
+                if (String(c.conversation_id) === String(conversationId)) {
+                    return {
+                        ...c,
+                        lastMessage: null,
+                        unread_count: 0
+                    };
+                }
+                return c;
+            });
+            return {
+                ...current,
+                homeConversationData: {
+                    ...current.homeConversationData,
+                    joinedConversations: updated
+                }
+            };
         });
     }
 }

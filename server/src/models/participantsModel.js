@@ -56,6 +56,11 @@ const Participant = sequelize.define('Participant', {
         defaultValue: true,
         field: 'is_active'
     },
+    history_cleared_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        field: 'history_cleared_at'
+    },
     last_read_message_id: {
         type: DataTypes.UUID,
         allowNull: true,

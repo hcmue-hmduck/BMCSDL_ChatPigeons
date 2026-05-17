@@ -50,4 +50,8 @@ export class Conversation {
     updateParticipant(participantId: string, data: any): Observable<any> {
         return this.http.put(`${environment.apiUrl}/home/participants/${participantId}`, data);
     }
+
+    clearConversationHistory(conversationId: string): Observable<any> {
+        return this.http.delete(`${this.apiUrl}/${conversationId}/clear`);
+    }
 }

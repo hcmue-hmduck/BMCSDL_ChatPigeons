@@ -1462,5 +1462,85 @@ GRANT EXECUTE ON dbo.sp_DeleteConversation TO AppRole;
 GRANT EXECUTE ON dbo.sp_LogCallHistory TO AppRole;
 GO
 
+-- =====================================================
+-- STORED PROCEDURE: sp_ClearConversationHistory
+-- =====================================================
+CREATE OR ALTER PROCEDURE sp_ClearConversationHistory
+    @ConversationId UNIQUEIDENTIFIER,
+    @UserId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE participants
+    SET history_cleared_at = CURRENT_TIMESTAMP,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE conversation_id = @ConversationId AND user_id = @UserId AND left_at IS NULL;
+
+    -- Kiểm tra xem có dòng nào được cập nhật không
+    IF @@ROWCOUNT = 0
+    BEGIN
+        RAISERROR(N'Không tìm thấy thành viên trong cuộc trò chuyện.', 16, 1);
+    END
+END
+GO
+
+GRANT EXECUTE ON dbo.sp_ClearConversationHistory TO AppRole;
+GO
+
+-- =====================================================
+-- STORED PROCEDURE: sp_UpdateConversationAllowMemberChat
+-- =====================================================
+CREATE OR ALTER PROCEDURE sp_UpdateConversationAllowMemberChat
+    @ConversationId UNIQUEIDENTIFIER,
+    @UserId UNIQUEIDENTIFIER,
+    @AllowMemberChat BIT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- 1. Kiểm tra xem cuộc trò chuyện có phải là nhóm (group) không
+    DECLARE @ConvType VARCHAR(20);
+    SELECT @ConvType = conversation_type FROM conversations WHERE id = @ConversationId;
+
+    IF @ConvType IS NULL
+    BEGIN
+        RAISERROR(N'Cuộc trò chuyện không tồn tại.', 16, 1);
+        RETURN;
+    END
+
+    IF @ConvType <> 'group'
+    BEGIN
+        RAISERROR(N'Chỉ có thể thay đổi cài đặt chat cho cuộc trò chuyện nhóm.', 16, 1);
+        RETURN;
+    END
+
+    -- 2. Kiểm tra xem người dùng có phải là Trưởng nhóm (owner) không
+    DECLARE @UserRole VARCHAR(20);
+    SELECT @UserRole = role 
+    FROM participants 
+    WHERE conversation_id = @ConversationId AND user_id = @UserId AND left_at IS NULL;
+
+    IF @UserRole IS NULL OR @UserRole <> 'owner'
+    BEGIN
+        RAISERROR(N'Chỉ Trưởng nhóm mới có quyền thay đổi cài đặt này.', 16, 1);
+        RETURN;
+    END
+
+    -- 3. Cập nhật allow_member_chat
+    UPDATE conversations
+    SET allow_member_chat = @AllowMemberChat,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = @ConversationId;
+
+    -- Trả về thông tin cập nhật
+    SELECT allow_member_chat FROM conversations WHERE id = @ConversationId;
+END
+GO
+
+GRANT EXECUTE ON dbo.sp_UpdateConversationAllowMemberChat TO AppRole;
+GO
+
+
 
 

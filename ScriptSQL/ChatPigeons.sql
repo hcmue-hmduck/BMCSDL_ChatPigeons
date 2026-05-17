@@ -64,6 +64,7 @@ CREATE TABLE participants (
     is_muted BIT DEFAULT 0,
     is_pinned BIT DEFAULT 0,
     last_read_message_id UNIQUEIDENTIFIER,
+    history_cleared_at DATETIMEOFFSET NULL,
     created_at DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET() NOT NULL,
     updated_at DATETIMEOFFSET DEFAULT SYSDATETIMEOFFSET(),
     CONSTRAINT uq_participants UNIQUE(conversation_id, user_id)

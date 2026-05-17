@@ -206,9 +206,20 @@ class HomeConversationService {
 
             const currentParticipant = currentUserParticipantMap.get(String(conv.id));
             const hasLeft = !!currentParticipant?.left_at;
-            const sidebarLastMessage = hasLeft
+            let sidebarLastMessage = hasLeft
                 ? leftConversationLastMessageMap.get(String(conv.id)) || null
                 : messagesMap.get(conv.last_message_id) || null;
+
+            let finalUnreadCount = hasLeft ? 0 : unreadCountsMap[conv.id] || 0;
+
+            const historyClearedAt = currentParticipant?.history_cleared_at ? new Date(currentParticipant.history_cleared_at) : null;
+            if (historyClearedAt && sidebarLastMessage) {
+                const messageCreatedAt = new Date(sidebarLastMessage.created_at);
+                if (messageCreatedAt <= historyClearedAt) {
+                    sidebarLastMessage = null;
+                    finalUnreadCount = 0;
+                }
+            }
 
             return {
                 conversation_id: conv.id,
@@ -218,27 +229,46 @@ class HomeConversationService {
                 ownerInfo: ownerInfoMap.get(conv.id) || null,
                 participants: convParticipants,
                 lastMessage: sidebarLastMessage,
-                unread_count: hasLeft ? 0 : unreadCountsMap[conv.id] || 0,
+                unread_count: finalUnreadCount,
                 is_pinned: isPinnedMap.get(conv.id) || false,
-                allow_history_view: conv.allow_history_view
+                allow_history_view: conv.allow_history_view,
+                allow_member_chat: conv.allow_member_chat
             };
         });
 
+        const filteredJoinedConversations = joinedConversations.filter(c => {
+            if (c.type === 'direct' && c.lastMessage === null) {
+                return false;
+            }
+            return true;
+        });
 
-        return { userInfo, joinedConversations };
+        return { userInfo, joinedConversations: filteredJoinedConversations };
     }
 
     async updateConversation(conversationId, conversationData, userId = null) {
-        // --- KIỂM TRA QUYỀN: Chỉ Trưởng nhóm (Owner) mới được đổi allow_member_chat ---
+        // Nếu thay đổi cài đặt cho phép thành viên nhắn tin, dùng Stored Procedure
         if (conversationData && conversationData.allow_member_chat !== undefined && userId) {
-            const participant = await participantsService.getParticipant({
-                conversation_id: conversationId,
-                user_id: userId
-            });
-            const role = participant?.role || participant?.owner;
-            if (role !== 'owner') {
-                const { ForbiddenError } = require('../core/errorResponse');
-                throw new ForbiddenError('Chỉ Trưởng nhóm mới có quyền thay đổi cài đặt này.');
+            try {
+                const result = await messagesModel.sequelize.query(
+                    'EXEC sp_UpdateConversationAllowMemberChat :conversationId, :userId, :allowMemberChat',
+                    {
+                        replacements: {
+                            conversationId,
+                            userId,
+                            allowMemberChat: conversationData.allow_member_chat ? 1 : 0
+                        },
+                        type: messagesModel.sequelize.QueryTypes.SELECT
+                    }
+                );
+                return result[0];
+            } catch (err) {
+                const errMsg = err.original?.message || err.message;
+                if (errMsg.includes('Chỉ Trưởng nhóm')) {
+                    const { ForbiddenError } = require('../core/errorResponse');
+                    throw new ForbiddenError(errMsg);
+                }
+                throw new BadRequestError(errMsg);
             }
         }
         return await conversationsService.updateConversation(conversationId, conversationData);
@@ -345,6 +375,20 @@ class HomeConversationService {
             participants: participants.map(enrich),
             you: enrich(you)
         };
+    }
+
+    async clearConversationHistory(conversationId, userId) {
+        if (!conversationId || !userId) throw new BadRequestError('params invalid');
+
+        await messagesModel.sequelize.query(
+            'EXEC sp_ClearConversationHistory ?, ?',
+            {
+                replacements: [conversationId, userId],
+                type: messagesModel.sequelize.QueryTypes.RAW
+            }
+        );
+
+        return { success: true };
     }
 }
 

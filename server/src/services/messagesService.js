@@ -75,6 +75,20 @@ class MessagesService {
         const replacements = { conversationId };
 
         if (userId) {
+            const [participant] = await messagesModel.sequelize.query(
+                'SELECT history_cleared_at FROM participants WHERE conversation_id = :conversationId AND user_id = :userId',
+                {
+                    replacements: { conversationId, userId },
+                    type: messagesModel.sequelize.QueryTypes.SELECT
+                }
+            );
+            if (participant && participant.history_cleared_at) {
+                query += ' AND created_at > :historyClearedAt';
+                replacements.historyClearedAt = participant.history_cleared_at;
+            }
+        }
+
+        if (userId) {
             const vaults = await conversationKeysVaultModel.findAll({
                 where: { user_id: userId, conversation_id: conversationId },
                 attributes: ['key_version'],
