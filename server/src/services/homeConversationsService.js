@@ -237,11 +237,7 @@ class HomeConversationService {
         });
 
         const filteredJoinedConversations = joinedConversations.filter(c => {
-            if (c.lastMessage === null) {
-                // Giữ lại nhóm mới tạo chưa có tin nhắn
-                if (c.type === 'group') {
-                    return true;
-                }
+            if (c.lastMessage === null && c.type !== 'group') {
                 return false;
             }
             return true;

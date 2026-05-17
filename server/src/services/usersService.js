@@ -17,11 +17,11 @@ class UsersService {
             const userIds = Array.isArray(where.id) ? where.id : [where.id];
             query += ' AND id IN (:userIds)';
             replacements.userIds = userIds;
-        } else {
-            if (where.full_name && typeof where.full_name === 'string') {
-                query += ' AND full_name LIKE :fullName';
-                replacements.fullName = `%${where.full_name}%`;
-            }
+        }
+
+        if (where.full_name && typeof where.full_name === 'string') {
+            query += ' AND full_name LIKE :fullName';
+            replacements.fullName = `%${where.full_name}%`;
         }
 
         query += ' ORDER BY full_name ASC';
