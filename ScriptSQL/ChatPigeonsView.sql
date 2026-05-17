@@ -1,6 +1,5 @@
 USE ChatPigeons;
 GO
-
 -- =====================================================
 -- VIEW: vw_GetConversations
 -- =====================================================
@@ -388,6 +387,41 @@ WHERE c.is_active = 1;
 GO
 
 -- =====================================================
+-- VIEW: vw_AllUsers
+-- =====================================================
+CREATE OR ALTER VIEW vw_AllUsers AS
+SELECT 
+    id, 
+    email, 
+    full_name, 
+    role, 
+    status, 
+    is_active, 
+    avatar_url, 
+    phone_number, 
+    bio, 
+    gender, 
+    is_email_verified, 
+    is_phone_verified, 
+    last_online_at, 
+    created_at, 
+    updated_at 
+FROM users
+WHERE LOWER(role) != 'admin';
+GO
+
+-- =====================================================
+-- VIEW: vw_DailyMessageStats
+-- =====================================================
+CREATE OR ALTER VIEW vw_DailyMessageStats AS
+SELECT 
+    CAST(created_at AS DATE) AS date, 
+    COUNT(*) AS count 
+FROM messages 
+GROUP BY CAST(created_at AS DATE);
+GO
+
+-- =====================================================
 -- GRANT SELECT FOR AppRole
 -- =====================================================
 GRANT SELECT ON dbo.vw_GetConversations TO AppRole;
@@ -407,4 +441,6 @@ GRANT SELECT ON dbo.vw_GetUsersByIds TO AppRole;
 GRANT SELECT ON dbo.vw_GetMessagesWithSender TO AppRole;
 GRANT SELECT ON dbo.vw_GetMessagesWithCalls TO AppRole;
 GRANT SELECT ON dbo.vw_GetConversationsWithLastMessage TO AppRole;
+GRANT SELECT ON dbo.vw_AllUsers TO AppRole;
+GRANT SELECT ON dbo.vw_DailyMessageStats TO AppRole;
 GO

@@ -10,6 +10,7 @@ router.post('/', usersController.createUser);
 router.put('/:id', usersController.updateUser);
 router.patch('/me/password-setup', usersController.setPassword);
 router.patch('/me/password-change', usersController.changePassword);
+router.patch('/:id/active', usersController.toggleActive);
 router.delete('/:id', usersController.deleteUser);
 
 module.exports = router;

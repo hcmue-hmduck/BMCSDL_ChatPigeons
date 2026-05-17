@@ -38,10 +38,8 @@ export class User {
     return this.http.get(`${environment.apiUrl}/home/users/search`, { params: { keyword } });
   }
 
-  // Xóa user
-  deleteUser(id: string): Observable<any> {
-    return this.http.delete(`${this.apiUrl}/${id}`);
+  // Lock/Unlock user
+  toggleActive(id: string, isActive: boolean): Observable<any> {
+    return this.http.patch(`${this.apiUrl}/${id}/active`, { is_active: isActive });
   }
-
-  
 }

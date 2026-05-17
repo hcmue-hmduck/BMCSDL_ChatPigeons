@@ -1,21 +1,22 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { UserAdminLayoutComponent } from '../userAdminLayout/userAdminLayout.component';
-
-import { MessagesAdminLayoutComponent } from '../messagesAdminLayout/messagesAdminLayout.component';
 import { User } from '../../services/user';
 import { AuthService } from '../../services/authService';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-admin-layout',
   standalone: true,
-  imports: [CommonModule, UserAdminLayoutComponent, MessagesAdminLayoutComponent],
+  imports: [CommonModule, UserAdminLayoutComponent],
   templateUrl: './adminLayout.component.html',
   styleUrl: './adminLayout.component.css'
 })
 export class AdminLayoutComponent {
   private userService = inject(User);
   private authService = inject(AuthService);
+  private http = inject(HttpClient);
 
   users = signal<any[]>([]);
   usersLoading = signal(false);
@@ -23,46 +24,40 @@ export class AdminLayoutComponent {
 
   currentTab = signal('Dashboard');
   adminProfile = computed(() => this.authService.getUserInfor());
+  statsData = signal<{ totalPosts: number, totalMessages: number, totalUsers: number } | null>(null);
 
   navItems = [
     { id: 'Dashboard', label: 'Dashboard', icon: 'bi-grid-1x2-fill' },
     { id: 'Users', label: 'Users', icon: 'bi-people-fill' },
-    { id: 'Messages', label: 'Messages', icon: 'bi-chat-left-dots-fill' },
-
-    { id: 'Server', label: 'Server', icon: 'bi-hdd-network-fill' },
-    { id: 'Settings', label: 'Settings', icon: 'bi-gear-fill' },
   ];
 
-  stats = computed(() => [
-    { label: 'Total Users', value: String(this.users().length), trend: this.usersLoading() ? 'Loading...' : 'Live data', icon: 'bi-people', color: 'primary' },
-    { label: 'Active Nodes', value: '842', trend: 'Stable', icon: 'bi-activity', color: 'primary' },
-    { label: 'Server Latency', value: '18ms', trend: '-2ms gain', icon: 'bi-lightning-charge', color: 'primary' },
-    { label: 'Messages/sec', value: '4.2k', trend: 'Peak load', icon: 'bi-chat-dots', color: 'primary' },
-  ]);
+  stats = computed(() => {
+    const nonBotUsers = this.users().filter((u: any) => !u.is_bot);
+    const totalUsers = nonBotUsers.length;
+    const recentUsers = nonBotUsers.filter((u: any) => {
+      if (!u.created_at) return false;
+      const date = new Date(u.created_at);
+      const now = new Date();
+      const diffTime = Math.abs(now.getTime() - date.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays <= 7;
+    }).length;
 
-  events = [
-    { id: '#X-10293', status: 'Success', origin: 'US-EAST-01', latency: '12ms', timestamp: '10:42:15 AM' },
-    { id: '#X-10294', status: 'Success', origin: 'EU-WEST-04', latency: '24ms', timestamp: '10:42:12 AM' },
-    { id: '#X-10295', status: 'Active', origin: 'AS-SOUTH-02', latency: '48ms', timestamp: '10:42:08 AM' },
-  ];
+    const data = this.statsData();
 
-  chartData = [
-    { name: 'MON', height: 45 },
-    { name: 'TUE', height: 40 },
-    { name: 'WED', height: 35 },
-    { name: 'THU', height: 65 },
-    { name: 'FRI', height: 80 },
-    { name: 'SAT', height: 55 },
-    { name: 'SUN', height: 95 },
-  ];
+    return [
+      { label: 'Tổng người dùng', value: String(data?.totalUsers ?? totalUsers), trend: '', icon: 'bi-people', color: 'primary' },
+      { label: 'Đăng ký gần đây', value: String(recentUsers), trend: '', icon: 'bi-person-plus', color: 'success' },
+      { label: 'Tin nhắn đã gửi', value: String(data?.totalMessages ?? 0), trend: '', icon: 'bi-chat-dots', color: 'info' },
+    ];
+  });
 
-  topHubs = [
-    { name: 'North America', value: 342, percent: '85%' },
-    { name: 'Europe Central', value: 298, percent: '70%' },
-  ];
+  postsChartData = signal<{ name: string, height: number, count?: number }[]>([]);
+  messagesChartData = signal<{ name: string, height: number, count?: number }[]>([]);
 
   ngOnInit(): void {
     this.loadUsers();
+    this.loadStats();
   }
 
   private loadUsers() {
@@ -71,7 +66,10 @@ export class AdminLayoutComponent {
 
     this.userService.getAllUsers().subscribe({
       next: (response: any) => {
-        this.users.set(response?.metadata || []);
+        const allUsers = response?.metadata || [];
+        // Lọc bỏ tài khoản có role là admin (cùng cấp quản trị viên)
+        const filteredUsers = allUsers.filter((u: any) => u.role?.toLowerCase() !== 'admin');
+        this.users.set(filteredUsers);
         this.usersLoading.set(false);
       },
       error: (error: any) => {
@@ -80,6 +78,92 @@ export class AdminLayoutComponent {
         this.usersLoading.set(false);
       }
     });
+  }
+
+  private loadStats() {
+    this.http.get<any>(`${environment.apiUrl}/admin/stats`).subscribe({
+      next: (response) => {
+        if (response && response.metadata) {
+          const data = response.metadata;
+          this.statsData.set(data);
+
+          // Process postsByDay
+          if (data.postsByDay) {
+            const mappedPosts = this.mapDataToChart(data.postsByDay);
+            this.postsChartData.set(mappedPosts);
+          }
+
+          // Process messagesByDay
+          if (data.messagesByDay) {
+            const mappedMessages = this.mapDataToChart(data.messagesByDay);
+            this.messagesChartData.set(mappedMessages);
+          }
+        }
+      },
+      error: (err) => {
+        console.error('Failed to load stats', err);
+      }
+    });
+  }
+
+  private mapDataToChart(dbData: any[]): { name: string, height: number, count?: number }[] {
+    try {
+      const days = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+      const result: { name: string, height: number, count?: number }[] = [];
+
+      if (!Array.isArray(dbData)) return [];
+
+      const counts = dbData.map(item => {
+        const c = Number(item.count);
+        return isNaN(c) ? 0 : c;
+      });
+      const maxCount = Math.max(...counts, 10);
+
+      // Get last 7 days using local timezone to avoid browser day shifts
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        const dayName = days[date.getDay()];
+        
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const dateStr = `${year}-${month}-${day}`; // YYYY-MM-DD local
+
+        // Find match in dbData
+        const match = dbData.find(item => {
+          if (!item.date) return false;
+          try {
+            // Lấy trực tiếp chuỗi YYYY-MM-DD từ database để tránh browser tự chuyển múi giờ
+            let itemDate = '';
+            if (typeof item.date === 'string') {
+              itemDate = item.date.split('T')[0];
+            } else {
+              const d = new Date(item.date);
+              const y = d.getFullYear();
+              const m = String(d.getMonth() + 1).padStart(2, '0');
+              const dayPart = String(d.getDate()).padStart(2, '0');
+              itemDate = `${y}-${m}-${dayPart}`;
+            }
+            return itemDate === dateStr;
+          } catch (e) {
+            return false;
+          }
+        });
+
+        const count = match ? Number(match.count) : 0;
+        result.push({
+          name: dayName,
+          height: Math.round((count / maxCount) * 100),
+          count: count
+        });
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error mapping data to chart:', error);
+      return [];
+    }
   }
 
   selectTab(tabId: string) {

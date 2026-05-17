@@ -20,16 +20,7 @@
             }
         </nav>
 
-        <div class="sidebar-status">
-            <div class="status-head">
-                <div class="status-pulse"></div>
-                <span class="status-label">System Status</span>
-            </div>
-            <div class="status-progress-bg">
-                <div class="status-progress-fill" style="width: 88%"></div>
-            </div>
-            <p class="status-text">All nodes operational</p>
-        </div>
+
     </aside>
 
     <!-- Main Content -->
@@ -39,16 +30,7 @@
             <h2 class="header-title">{{ currentTab() }} Overview</h2>
 
             <div class="header-right">
-                <div class="header-search">
-                    <i class="bi bi-search"></i>
-                    <input type="text" placeholder="Search telemetry...">
-                </div>
-
                 <div class="header-actions">
-                    <button class="action-btn" title="Notifications">
-                        <i class="bi bi-bell"></i>
-                    </button>
-                    <div class="action-divider"></div>
                     <div class="admin-profile">
                         <div class="profile-text">
                             <span class="profile-name">{{ adminProfile().full_name || 'Admin' }}</span>
@@ -72,8 +54,8 @@
                     @for (stat of stats(); track stat.label) {
                     <div class="stat-card">
                         <div class="stat-info">
-                            <p class="stat-label">{{ stat.label }}</p>
-                            <h3 class="stat-value">{{ stat.value }}</h3>
+                            <p class="stat-label">{{ stat.label || 'N/A' }}</p>
+                            <h3 class="stat-value">{{ stat.value || '0' }}</h3>
                             <p class="stat-trend" [ngClass]="{'trend-up': stat.trend.includes('+')}">
                                 <i class="bi"
                                     [ngClass]="stat.trend.includes('+') ? 'bi-graph-up' : 'bi-check-circle'"></i>
@@ -90,119 +72,34 @@
 
                 <!-- Charts Section -->
                 <div class="charts-layout">
-                    <!-- Main Chart -->
-                    <div class="chart-panel main-chart">
+
+                    <!-- Messages Chart -->
+                    <div class="chart-panel">
                         <div class="panel-head">
                             <div class="panel-info">
-                                <h4>User Growth Trends</h4>
-                                <p>Real-time registration analysis</p>
-                            </div>
-                            <div class="panel-filters">
-                                <button class="filter-btn active">7D</button>
-                                <button class="filter-btn">30D</button>
+                                <h4>Thống kê tin nhắn</h4>
+                                <p>Số lượng tin nhắn theo ngày</p>
                             </div>
                         </div>
 
                         <div class="chart-container">
                             <div class="chart-y-axis">
-                                <span>1.2M</span>
-                                <span>0.8M</span>
-                                <span>0.4M</span>
+                                <span>100</span>
+                                <span>50</span>
                                 <span>0</span>
                             </div>
                             <div class="chart-bars">
-                                @for (data of chartData; track data.name) {
+                                @for (data of messagesChartData(); track data.name) {
                                 <div class="chart-bar-wrap">
                                     <div class="chart-bar" [style.height.%]="data.height">
                                         <div class="bar-glow"></div>
+                                        <span class="bar-value">{{ data.count }}</span>
                                     </div>
                                     <span class="bar-label">{{ data.name }}</span>
                                 </div>
                                 }
                             </div>
                         </div>
-                    </div>
-
-                    <!-- Distribution -->
-                    <div class="chart-panel distribution-panel">
-                        <div class="panel-head">
-                            <h4>Global Distribution</h4>
-                            <i class="bi bi-globe"></i>
-                        </div>
-
-                        <div class="map-container">
-                            <div class="map-bg">
-                                <i class="bi bi-globe-central-south-asia"></i>
-                            </div>
-
-                            <!-- Glowing Points -->
-                            <div class="map-point point-1"></div>
-                            <div class="map-point point-2"></div>
-                            <div class="map-point point-3"></div>
-
-                            <div class="map-overlay">
-                                <div class="overlay-head">
-                                    <span>Top Hubs</span>
-                                    <span class="live-tag">
-                                        <div class="live-dot"></div>
-                                        LIVE
-                                    </span>
-                                </div>
-                                <div class="hub-list">
-                                    @for (hub of topHubs; track hub.name) {
-                                    <div class="hub-item">
-                                        <div class="hub-info">
-                                            <span>{{ hub.name }}</span>
-                                            <span class="hub-val">{{ hub.value }}</span>
-                                        </div>
-                                        <div class="hub-progress">
-                                            <div class="hub-fill" [style.width]="hub.percent"></div>
-                                        </div>
-                                    </div>
-                                    }
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Events Table -->
-                <div class="table-panel">
-                    <div class="panel-head">
-                        <h4>Recent System Events</h4>
-                        <button class="download-csv">
-                            <i class="bi bi-download"></i>
-                            Download CSV
-                        </button>
-                    </div>
-                    <div class="table-wrap">
-                        <table class="events-table">
-                            <thead>
-                                <tr>
-                                    <th>Event ID</th>
-                                    <th>Status</th>
-                                    <th>Node Origin</th>
-                                    <th>Latency</th>
-                                    <th class="text-right">Timestamp</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @for (event of events; track event.id) {
-                                <tr>
-                                    <td class="event-id">{{ event.id }}</td>
-                                    <td>
-                                        <div class="status-cell" [class.success]="event.status === 'Success'">
-                                            <div class="status-dot"></div>
-                                            {{ event.status }}
-                                        </div>
-                                    </td>
-                                    <td class="event-origin">{{ event.origin }}</td>
-                                    <td class="event-latency">{{ event.latency }}</td>
-                                    <td class="event-time">{{ event.timestamp }}</td>
-                                </tr>
-                                }
-                            </tbody>
-                        </table>
                     </div>
                 </div>
             </div>
@@ -213,10 +110,6 @@
             }
 
 
-
-            @if (currentTab() === 'Messages') {
-            <app-messages-admin-layout></app-messages-admin-layout>
-            }
         </div>
     </main>
 </div>

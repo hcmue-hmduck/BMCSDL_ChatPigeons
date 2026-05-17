@@ -9,6 +9,8 @@ import { CryptoUtilityService } from './services/e2ee/cryptoUtilityService';
 import { LocalDatabaseService } from './services/e2ee/localDatabaseService';
 import { KeyManagementService } from './services/e2ee/keyManagementService';
 import { E2EEMessageService } from './services/e2ee/e2eeMessageService';
+import { SocketService } from './services/socket';
+import { Router } from '@angular/router';
 
 @Component({
     selector: 'app-root',
@@ -23,6 +25,8 @@ export class App implements OnInit {
     callService = inject(CallService);
     authService = inject(AuthService);
     platformId = inject(PLATFORM_ID);
+    socketService = inject(SocketService);
+    router = inject(Router);
 
     // test service
     cryptoService = inject(CryptoUtilityService);
@@ -32,6 +36,12 @@ export class App implements OnInit {
 
     ngOnInit() {
         if (isPlatformBrowser(this.platformId)) {
+            this.socketService.on('forceLogout', (data: any) => {
+                alert(data.message || 'Tài khoản của bạn đã bị khóa!');
+                this.authService.clearLocalUser();
+                this.router.navigate(['/']);
+            });
+
             const windowAny = window as any;
             windowAny.OneSignalDeferred = windowAny.OneSignalDeferred || [];
             windowAny.OneSignalDeferred.push(async (OneSignal: any) => {

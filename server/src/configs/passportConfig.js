@@ -31,6 +31,10 @@ const socialVerifyCallback = async (accessToken, refreshToken, profile, cb) => {
 
         const user = await userService.findOrCreateSocialUser(userProfile);
 
+        if (!user.is_active) {
+            return cb(null, false, { message: 'account is locked' });
+        }
+
         return cb(null, user);
     } catch (error) {
         return cb(error);

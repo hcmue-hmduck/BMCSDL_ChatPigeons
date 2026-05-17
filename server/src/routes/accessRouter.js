@@ -20,7 +20,25 @@ router.post('/otp/verify-forgot-password', accessController.verifyForgotPassword
 router.post('/refresh-token', refreshAuthentication, accessController.refreshToken);
 router.post('/logout', authentication, accessController.logout);
 
-router.post('/login', passport.authenticate('local', { session: false }), accessController.login);
+router.post('/login', (req, res, next) => {
+    passport.authenticate('local', { session: false }, (err, user, info) => {
+        if (err) {
+            return next(err);
+        }
+        if (!user) {
+            if (info instanceof Error) {
+                return next(info);
+            }
+            const message = info && info.message ? info.message : 'invalid email or password';
+            const status = info && info.status ? info.status : 401;
+            const error = new Error(message);
+            error.status = status;
+            return next(error);
+        }
+        req.user = user;
+        next();
+    })(req, res, next);
+}, accessController.login);
 
 router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 router.get(

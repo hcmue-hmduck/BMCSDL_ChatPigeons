@@ -51,11 +51,7 @@ const Participant = sequelize.define('Participant', {
         defaultValue: false,
         field: 'is_pinned'
     },
-    is_active: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: true,
-        field: 'is_active'
-    },
+
     history_cleared_at: {
         type: DataTypes.DATE,
         allowNull: true,

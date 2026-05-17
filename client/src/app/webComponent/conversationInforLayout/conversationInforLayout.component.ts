@@ -1268,13 +1268,8 @@ export class ConversationInfoLayoutComponent implements OnInit, OnDestroy, OnCha
                         isLoaded: true
                     });
 
-                    // 4. Cập nhật Sidebar tùy loại cuộc hội thoại (Direct hay Group)
-                    if (this.isGroupConversation) {
-                        this.activeConversationService.clearConversationSidebarPreview(conversationId);
-                    } else {
-                        // Ẩn/xóa hoàn toàn cuộc trò chuyện 2 người khỏi danh sách sidebar
-                        this.activeConversationService.removeConversationFromList(conversationId);
-                    }
+                    // 4. Ẩn/xóa hoàn toàn cuộc trò chuyện khỏi danh sách sidebar
+                    this.activeConversationService.removeConversationFromList(conversationId);
 
                     // Tự động chuyển hướng về trang chủ sau khi xóa thành công
                     this.activeConversationService.setActiveConversationId(null);

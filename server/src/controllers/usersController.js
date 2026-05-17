@@ -1,4 +1,5 @@
 const usersService = require('../services/usersService');
+const redisService = require('../services/redisService');
 const SuccessResponse = require('../core/successResponse');
 
 class UsersController {
@@ -94,6 +95,47 @@ class UsersController {
             metadata: await usersService.changePassword(id, oldPassword, newPassword)
         }).send(res)
 
+    }
+
+    // PATCH /admin/users/:id/active - Lock / Unlock user
+    async toggleActive(req, res, next) {
+        const { is_active } = req.body;
+        const userId = req.params.id;
+
+        const updatedUser = await usersService.toggleActive(userId, is_active);
+
+        // Nếu khóa tài khoản, xóa toàn bộ session đang hoạt động trong Redis để chặn API ngay lập tức
+        if (!is_active) {
+            await redisService.deleteAllUserSessions(userId);
+        }
+
+        // Phát tín hiệu socket tới các client của user bị tác động
+        const io = req.app.get('io');
+        const onlineUsers = req.app.get('onlineUsers');
+
+        if (io && onlineUsers) {
+            const userSockets = onlineUsers.get(String(userId));
+            if (userSockets) {
+                if (!is_active) {
+                    // Nếu khóa tài khoản, ép buộc đăng xuất ngay lập tức
+                    userSockets.forEach(socketId => {
+                        io.to(socketId).emit('forceLogout', { message: 'Tài khoản của bạn đã bị khóa bởi Admin!' });
+                    });
+                } else {
+                    userSockets.forEach(socketId => {
+                        io.to(socketId).emit('accountUnlocked', { message: 'Tài khoản của bạn đã được mở khóa!' });
+                    });
+                }
+            }
+
+            // Gửi sự kiện cập nhật trạng thái hoạt động toàn cục
+            io.emit('userActiveStatusChanged', { userId, is_active });
+        }
+
+        new SuccessResponse({
+            message: is_active ? 'Unlock user successfully' : 'Lock user successfully',
+            metadata: updatedUser
+        }).send(res);
     }
 
     // DELETE /admin/users/:id - Xóa user

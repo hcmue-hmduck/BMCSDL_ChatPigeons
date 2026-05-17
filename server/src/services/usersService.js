@@ -7,7 +7,7 @@ const { getUpdateData } = require('../utils/dataUtil.js');
 class UsersService {
     // Lấy users theo điều kiện filter
     async getAllUsers(where = {}, options = {}) {
-        let query = 'SELECT * FROM vw_GetUsersByIds WHERE is_active = 1 AND public_key IS NOT NULL';
+        let query = 'SELECT * FROM vw_AllUsers WHERE 1=1';
         const replacements = {};
 
         if (where.id) {
@@ -51,6 +51,10 @@ class UsersService {
 
         const isMatch = await compareHashString(password, foundUser.password_hash);
         if (!isMatch) throw new UnauthorizedError('invalid email or password');
+
+        if (!foundUser.is_active) {
+            throw new UnauthorizedError('account is locked');
+        }
 
         return foundUser;
     }
@@ -188,6 +192,16 @@ class UsersService {
 
         user.password_hash = await hashString(newPassword);
         return await user.save();
+    }
+
+    async toggleActive(userId, isActive) {
+        // Gọi Stored Procedure trực tiếp
+        await usersModel.sequelize.query('EXEC sp_ToggleUserActive ?, ?', {
+            replacements: [userId, isActive ? 1 : 0],
+            type: usersModel.sequelize.QueryTypes.RAW
+        });
+
+        return await usersModel.findByPk(userId);
     }
 
     // Xóa user (Soft Delete)

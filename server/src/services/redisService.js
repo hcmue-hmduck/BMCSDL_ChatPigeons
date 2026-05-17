@@ -58,6 +58,16 @@ class RedisService {
         return (await redis.del(key)) > 0;
     }
 
+    async deleteAllUserSessions(userId) {
+        if (!userId) throw new BadRequestError('missing parameters');
+        const pattern = `auth:session:${userId}:*`;
+        const keys = await redis.keys(pattern);
+        if (keys.length > 0) {
+            return await redis.del(...keys);
+        }
+        return 0;
+    }
+
     async getAccessTokenSecret(userId, sid) {
         if (!userId || !sid) throw new BadRequestError('missing parameters');
         const key = `auth:session:${userId}:${sid}`;

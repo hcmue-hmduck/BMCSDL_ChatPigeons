@@ -237,7 +237,7 @@ class HomeConversationService {
         });
 
         const filteredJoinedConversations = joinedConversations.filter(c => {
-            if (c.type === 'direct' && c.lastMessage === null) {
+            if (c.lastMessage === null) {
                 return false;
             }
             return true;

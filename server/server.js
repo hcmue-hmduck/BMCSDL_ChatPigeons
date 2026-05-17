@@ -82,12 +82,15 @@ app.get('/favicon.ico', (req, res) => {
     res.status(204).end();
 });
 
-routes(app);
-
 // Map để lưu trạng thái online của users (tối ưu cho multiple devices)
 const onlineUsers = new Map(); // { userId: Set<socketId> }
 const socketToUser = new Map(); // { socketId: userId } - O(1) lookup
 const disconnectTimeouts = new Map(); // { userId: NodeJS.Timeout }
+
+app.set('io', io);
+app.set('onlineUsers', onlineUsers);
+
+routes(app);
 
 io.on('connection', (socket) => {
     console.log('A user connected:', socket.id);

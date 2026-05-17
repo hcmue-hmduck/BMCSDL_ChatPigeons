@@ -188,11 +188,10 @@
 }
 
 .admin-header {
-    height: 64px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 32px;
+    padding: 24px 32px;
     background: rgba(255, 255, 255, 0.03);
     backdrop-filter: blur(24px);
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
@@ -215,65 +214,10 @@
     gap: 24px;
 }
 
-.header-search {
-    position: relative;
-}
-
-.header-search i {
-    position: absolute;
-    left: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--text-slate-500);
-    font-size: 1rem;
-}
-
-.header-search input {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-    padding: 6px 16px 6px 40px;
-    width: 256px;
-    color: var(--text-slate-200);
-    font-size: 0.875rem;
-    transition: all 0.2s;
-}
-
-.header-search input:focus {
-    outline: none;
-    border-color: rgba(187, 134, 252, 0.5);
-    background: rgba(255, 255, 255, 0.08);
-}
-
 .header-actions {
     display: flex;
     align-items: center;
     gap: 24px;
-}
-
-.action-btn {
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: var(--text-slate-300);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.action-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--text-slate-100);
-}
-
-.action-divider {
-    width: 1px;
-    height: 32px;
-    background: rgba(255, 255, 255, 0.1);
 }
 
 .admin-profile {
@@ -322,18 +266,23 @@
     padding: 32px;
     width: 100%;
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .dashboard-grid {
     display: flex;
     flex-direction: column;
-    gap: 32px;
+    gap: 24px;
+    flex: 1;
+    min-height: 0;
 }
 
 /* Stats Cards */
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 24px;
 }
 
@@ -424,9 +373,10 @@
 
 /* Charts Layout */
 .charts-layout {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 32px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
 }
 
 .chart-panel {
@@ -437,6 +387,8 @@
     padding: 24px;
     display: flex;
     flex-direction: column;
+    flex: 1;
+    min-height: 0;
 }
 
 .panel-head {
@@ -486,7 +438,8 @@
 }
 
 .chart-container {
-    height: 300px;
+    flex: 1;
+    min-height: 0;
     width: 100%;
     margin-top: 16px;
     display: flex;
@@ -506,7 +459,7 @@
 .chart-bars {
     flex: 1;
     display: flex;
-    justify-content: space-between;
+    justify-content: space-around;
     align-items: flex-end;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     padding-bottom: 8px;
@@ -523,12 +476,19 @@
 }
 
 .chart-bar {
-    width: 60%;
-    max-width: 32px;
-    background: linear-gradient(to top, transparent, var(--admin-primary));
-    border-radius: 999px 999px 0 0;
+    width: 75%;
+    max-width: 80px;
+    background: linear-gradient(to top, rgba(187, 134, 252, 0.1), var(--admin-primary));
+    border-radius: 6px 6px 0 0;
     position: relative;
-    transition: height 1s ease-out;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.chart-bar:hover {
+    background: linear-gradient(to top, rgba(187, 134, 252, 0.3), var(--admin-primary));
+    box-shadow: 0 0 25px rgba(187, 134, 252, 0.4);
+    transform: scaleX(1.05);
 }
 
 .bar-glow {
@@ -536,7 +496,39 @@
     inset: 0;
     background: var(--admin-primary);
     filter: blur(8px);
-    opacity: 0.3;
+    opacity: 0.2;
+    transition: opacity 0.3s;
+}
+
+.chart-bar:hover .bar-glow {
+    opacity: 0.45;
+}
+
+.bar-value {
+    position: absolute;
+    top: -28px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--admin-primary);
+    background: rgba(11, 14, 20, 0.9);
+    border: 1px solid rgba(187, 134, 252, 0.3);
+    padding: 2px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    text-shadow: 0 0 5px rgba(187, 134, 252, 0.3);
+    box-shadow: 0 0 12px rgba(187, 134, 252, 0.15);
+    opacity: 0.85;
+    pointer-events: none;
+    transition: all 0.2s ease;
+}
+
+.chart-bar:hover .bar-value {
+    transform: translateX(-50%) scale(1.1);
+    border-color: var(--admin-primary);
+    color: #fff;
+    box-shadow: 0 0 15px rgba(187, 134, 252, 0.3);
 }
 
 .bar-label {
