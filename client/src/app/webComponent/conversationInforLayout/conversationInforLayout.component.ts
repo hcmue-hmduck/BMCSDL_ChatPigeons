@@ -706,6 +706,7 @@ export class ConversationInfoLayoutComponent implements OnInit, OnDestroy, OnCha
 
                 this.conversationService.deleteConversation(conversationId).subscribe({
                     next: () => {
+                        this.socketService.emit('disbandGroup', { conversation_id: conversationId });
                         Swal.fire('Thành công', 'Đã giải tán nhóm', 'success');
                         this.activeConversationService.activeConversationId.set(null);
                     },

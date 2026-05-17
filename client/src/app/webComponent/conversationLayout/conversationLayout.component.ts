@@ -75,6 +75,10 @@ export class ConversationLayoutComponent implements OnInit, OnDestroy {
     UserPresence = this.convStore.userPresence;
     
     currentUserId = computed(() => this.authService.getUserId());
+    visibleConversations = computed(() => {
+        const joined = this.convStore.joinedConversations();
+        return joined.filter((c: any) => !c.is_hidden);
+    });
 
     toggleConversationInfor() {
         this.convStore.toggleConversationInfor();

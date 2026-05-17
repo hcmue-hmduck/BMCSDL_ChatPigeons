@@ -279,25 +279,8 @@ class HomeMessagesService {
             parent_message_id ? messagesService.getMessageById(parent_message_id) : Promise.resolve(null),
         ]);
 
-        // 2. Update conversation + đồng bộ mốc đã đọc của người gửi + lấy parent sender
-        const [, , parentSender] = await Promise.all([
-            conversationsService.updateConversation(conversationId, {
-                last_message_id: newMessage.id,
-            }),
-            (async () => {
-                const senderParticipant = await participantsService.getParticipant({
-                    conversation_id: conversationId,
-                    user_id: senderId,
-                });
-
-                if (!senderParticipant) return null;
-
-                return participantsService.updateParticipant(senderParticipant.id, {
-                    last_read_message_id: newMessage.id,
-                });
-            })(),
-            parentMessage ? usersService.getUserById(parentMessage.sender_id) : Promise.resolve(null),
-        ]);
+        // 2. Lấy parent sender (không cần gọi update vì sp_SendMessage đã tự động lo hết các cập nhật liên quan)
+        const parentSender = parentMessage ? await usersService.getUserById(parentMessage.sender_id) : null;
 
         const parent_message_info = parentMessage
             ? {

@@ -275,6 +275,12 @@ io.on('connection', (socket) => {
         console.log(`User ${user_id} left group ${conversation_id}`);
     });
 
+    socket.on('disbandGroup', (data) => {
+        const { conversation_id } = data;
+        io.to(conversation_id).emit('disbandGroup', data);
+        console.log(`Group ${conversation_id} disbanded`);
+    });
+
     socket.on('kickMember', (data) => {
         const { conversation_id, kicked_user_id } = data;
         

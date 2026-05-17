@@ -1,4 +1,5 @@
 const homeConversationsService = require('../services/homeConversationsService');
+const conversationsService = require('../services/conversationsService');
 const SuccessResponse = require('../core/successResponse');
 
 class HomeConversationController {
@@ -77,6 +78,24 @@ class HomeConversationController {
             return new SuccessResponse({
                 message: 'Clear conversation history successfully',
                 metadata: result,
+            }).send(res);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async deleteConversation(req, res, next) {
+        try {
+            const conversationId = req.params.convID;
+            const isDeleted = await conversationsService.deleteConversation(conversationId);
+            if (!isDeleted) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Conversation not found'
+                });
+            }
+            return new SuccessResponse({
+                message: 'Disband group successfully',
             }).send(res);
         } catch (error) {
             next(error);

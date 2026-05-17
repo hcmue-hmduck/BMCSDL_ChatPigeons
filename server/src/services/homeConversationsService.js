@@ -232,18 +232,25 @@ class HomeConversationService {
                 unread_count: finalUnreadCount,
                 is_pinned: isPinnedMap.get(conv.id) || false,
                 allow_history_view: conv.allow_history_view,
-                allow_member_chat: conv.allow_member_chat
+                allow_member_chat: conv.allow_member_chat,
+                history_cleared_at: currentParticipant?.history_cleared_at || null
             };
         });
 
-        const filteredJoinedConversations = joinedConversations.filter(c => {
-            if (c.lastMessage === null && c.type !== 'group') {
-                return false;
+        const processedJoinedConversations = joinedConversations.map(c => {
+            let isHidden = false;
+            if (c.lastMessage === null) {
+                // Nhóm rỗng mới tạo (chưa từng bị xóa lịch sử) thì hiển thị
+                if (c.type === 'group' && c.history_cleared_at === null) {
+                    isHidden = false;
+                } else {
+                    isHidden = true;
+                }
             }
-            return true;
+            return { ...c, is_hidden: isHidden };
         });
 
-        return { userInfo, joinedConversations: filteredJoinedConversations };
+        return { userInfo, joinedConversations: processedJoinedConversations };
     }
 
     async updateConversation(conversationId, conversationData, userId = null) {

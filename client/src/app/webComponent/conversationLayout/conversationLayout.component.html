@@ -32,8 +32,8 @@
         <div class="conv-list-container">
             <!-- Normal Conversation List -->
             <div class="conv-list" *ngIf="!isSearchView()">
-                @if (convStore.joinedConversations().length > 0) {
-                    @for (conv of convStore.joinedConversations(); track conv.conversation_id) {
+                @if (visibleConversations().length > 0) {
+                    @for (conv of visibleConversations(); track conv.conversation_id) {
                     <a href="javascript:void(0)" class="conv-item"
                         [class.active]="selectedConversationId() === conv.conversation_id"
                         [class.is-unread]="conv.unread_count > 0" (click)="handleConversationID(conv)">

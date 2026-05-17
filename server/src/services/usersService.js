@@ -11,8 +11,6 @@ class UsersService {
         const replacements = {};
 
         if (where.id) {
-            // Khi truy vấn các ID cụ thể (như thành viên trong cuộc trò chuyện), 
-            // lấy trực tiếp từ bảng 'users' để tránh việc lọc mất Admin làm lỗi hiển thị tin nhắn/nhóm
             query = 'SELECT * FROM users WHERE is_active = 1';
             const userIds = Array.isArray(where.id) ? where.id : [where.id];
             query += ' AND id IN (:userIds)';

@@ -5,6 +5,7 @@ import { SocketService } from './socket';
 import { AuthService } from './authService';
 import { E2EEMessageService } from './e2ee/e2eeMessageService';
 import { KeyManagementService } from './e2ee/keyManagementService';
+import Swal from 'sweetalert2';
 
 export interface UserPresence {
     status: string;
@@ -496,6 +497,22 @@ export class ActiveConversationService implements OnDestroy {
             this.updateConversationParticipantStatus(data.conversation_id, data.user_id, now);
         });
 
+        this.socketService.on('disbandGroup', (data: any) => {
+            const now = new Date().toISOString();
+            const conversationsMap = this.conversations();
+            const joinedList = conversationsMap?.homeConversationData?.joinedConversations || [];
+            const conv = joinedList.find((c: any) => String(c.conversation_id) === String(data.conversation_id));
+            if (conv && conv.participants) {
+                conv.participants.forEach((p: any) => {
+                    this.updateConversationParticipantStatus(data.conversation_id, p.user_id, now);
+                });
+            }
+            if (this.activeConversationId() === data.conversation_id) {
+                Swal.fire('Thông báo', 'Nhóm này đã được giải tán bởi trưởng nhóm', 'info');
+                this.activeConversationId.set(null);
+            }
+        });
+
         this.socketService.on('kickMember', (data: any) => {
             const now = new Date().toISOString();
             this.updateConversationParticipantStatus(data.conversation_id, data.kicked_user_id, now);
@@ -642,6 +659,7 @@ export class ActiveConversationService implements OnDestroy {
         if (this.onFriendRequestSocket) this.socketService.off('sendFriendRequest', this.onFriendRequestSocket);
         if (this.onReactionMessageSocket) this.socketService.off('reactionMessage', this.onReactionMessageSocket);
         this.socketService.off('leaveGroup');
+        this.socketService.off('disbandGroup');
         this.socketService.off('kickMember');
         this.socketService.off('updateParticipant');
         if (this.onAddMemberSocket) this.socketService.off('addMember', this.onAddMemberSocket);
@@ -737,6 +755,7 @@ export class ActiveConversationService implements OnDestroy {
                     iv: data.iv,
                     key_version: data.key_version,
                 };
+                conv.is_hidden = false;
 
                 const isMuted = me?.is_muted || false;
 

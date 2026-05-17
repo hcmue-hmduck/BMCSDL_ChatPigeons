@@ -133,6 +133,11 @@ BEGIN
         last_message_at = CURRENT_TIMESTAMP 
     WHERE id = @ConversationId;
 
+    -- Cập nhật last_read_message_id cho participant (người gửi)
+    UPDATE participants
+    SET last_read_message_id = @NewMsgId
+    WHERE conversation_id = @ConversationId AND user_id = @SenderId;
+
     -- Trả về ID tin nhắn mới
     SELECT @NewMsgId AS NewMessageId;
 END
@@ -1393,7 +1398,7 @@ BEGIN
     UPDATE participants
     SET history_cleared_at = CURRENT_TIMESTAMP,
         updated_at = CURRENT_TIMESTAMP
-    WHERE conversation_id = @ConversationId AND user_id = @UserId AND left_at IS NULL;
+    WHERE conversation_id = @ConversationId AND user_id = @UserId;
 
     -- Kiểm tra xem có dòng nào được cập nhật không
     IF @@ROWCOUNT = 0
@@ -1485,6 +1490,53 @@ BEGIN
 END
 GO
 
+-- =====================================================
+-- STORED PROCEDURE: sp_DisbandGroupConversation
+-- =====================================================
+CREATE OR ALTER PROCEDURE sp_DisbandGroupConversation
+    @ConversationId UNIQUEIDENTIFIER,
+    @ActorId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        -- 1. Cho tất cả thành viên rời nhóm (đặt left_at)
+        UPDATE participants 
+        SET left_at = CURRENT_TIMESTAMP 
+        WHERE conversation_id = @ConversationId AND left_at IS NULL;
+
+        -- 2. Thêm tin nhắn hệ thống báo nhóm đã giải tán
+        DECLARE @SystemMessageId UNIQUEIDENTIFIER = NEWID();
+        INSERT INTO messages (
+            id, conversation_id, sender_id, message_type, content, 
+            created_at, updated_at, is_deleted
+        )
+        VALUES (
+            @SystemMessageId, @ConversationId, @ActorId, 'system', 
+            N'<i class="bi bi-x-circle"></i> Trưởng nhóm đã giải tán nhóm', 
+            CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0
+        );
+
+        -- 3. Cập nhật last_message_id và last_message_at của cuộc hội thoại
+        UPDATE conversations 
+        SET 
+            last_message_id = @SystemMessageId,
+            last_message_at = CURRENT_TIMESTAMP
+        WHERE id = @ConversationId;
+
+        COMMIT TRANSACTION;
+        SELECT 1 AS Success, @SystemMessageId AS SystemMessageId;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END;
+GO
 
 -- =====================================================
 -- GRANT EXECUTE FOR AppRole
@@ -1530,4 +1582,5 @@ GRANT EXECUTE ON dbo.sp_UpdateConversationAllowMemberChat TO AppRole;
 GRANT EXECUTE ON dbo.sp_ClearConversationHistory TO AppRole;
 GRANT EXECUTE ON dbo.sp_ToggleUserActive TO AppRole;
 GRANT EXECUTE ON dbo.sp_GetAdminOverviewStats TO AppRole;
+GRANT EXECUTE ON dbo.sp_DisbandGroupConversation TO AppRole;
 GO

@@ -96,13 +96,17 @@ class ConversationsService {
         }
     }
 
-    // Xóa conversation (Soft Delete)
+    // Xóa/Giải tán conversation
     async deleteConversation(conversationId) {
         const conversation = await conversationsModel.findByPk(conversationId);
         if (conversation) {
-            await conversation.update({
-                is_active: false
-            });
+            await conversationsModel.sequelize.query(
+                'EXEC sp_DisbandGroupConversation ?, ?',
+                {
+                    replacements: [conversationId, conversation.created_by],
+                    type: conversationsModel.sequelize.QueryTypes.SELECT
+                }
+            );
             return true;
         }
         return false;
